@@ -41,7 +41,6 @@ def buscar_produto_nagumo(palavra_chave):
                     descricao_tag = container.find('span', class_='sc-fLlhyt dPLwZv sc-14455254-0 sc-c5cd0085-10 ezNOEq krnAMj')
                     descricao_text = descricao_tag.text.strip() if descricao_tag else "Descrição não encontrada"
 
-                    # Buscar imagem no container pai
                     imagem_container = container.find_previous('div', class_='sc-bczRLJ sc-f719e9b0-0 sc-c5cd0085-2 hJJyHP dbeope eKZaNO')
                     imagem_tag = imagem_container.find('img') if imagem_container else None
                     imagem_src = imagem_tag['src'] if imagem_tag else None
@@ -58,4 +57,4 @@ if busca:
     st.write(f"**Preço:** {preco}")
     st.write(f"**Descrição:** {descricao}")
     if imagem:
-        st.image(imagem, use_column_width=True)
+        st.image(imagem, use_container_width=True)
