@@ -21,7 +21,6 @@ busca = st.text_input("Digite o nome do produto:")
 
 def buscar_produto_nagumo(palavra_chave):
     palavra_chave_url = palavra_chave.strip().lower().replace(" ", "+")
-    # Revertido o ID da loja para o original que estava funcionando
     url = f"https://www.nagumo.com.br/nagumo/74b2f698-cffc-4a38-b8ce-0407f8d98de3/busca/{palavra_chave_url}" 
     headers = {"User-Agent": "Mozilla/5.0"}
 
@@ -30,30 +29,34 @@ def buscar_produto_nagumo(palavra_chave):
         soup = BeautifulSoup(r.text, 'html.parser')
         search_words = set(palavra_chave.lower().split())
         
-        # A classe 'sc-c5cd0085-5' parece ser o contêiner principal de cada produto
-        product_containers = soup.find_all('div', class_='sc-bczRLJ sc-f719e9b0-0 sc-c5cd0085-5 hJJyHP dbeope kekHxB')
+        # Procura por todos os contêineres de produto que parecem ser o bloco principal
+        # Baseado nos exemplos fornecidos, a classe 'sc-c5cd0085-0' com 'fWmXTW' parece ser o contêiner de cada item.
+        all_product_blocks = soup.find_all('div', class_='sc-c5cd0085-0 fWmXTW')
 
-        for container in product_containers:
-            nome_tag = container.find('span', class_='sc-fLlhyt hJreDe sc-14455254-0 sc-c5cd0085-4 ezNOEq clsIKA')
+        for product_block in all_product_blocks:
+            # Tenta encontrar o nome do produto dentro deste bloco
+            nome_tag = product_block.find('span', class_='sc-fLlhyt hJreDe sc-14455254-0 sc-c5cd0085-4 ezNOEq clsIKA')
+            
             if nome_tag:
                 nome_text = nome_tag.text.strip()
                 product_words = set(nome_text.lower().split())
                 
-                # Verifica se as palavras da busca estão contidas no nome do produto
+                # Verifica se as palavras da busca estão contidas no nome do produto encontrado
                 if search_words.issubset(product_words):
-                    preco_tag = container.find('span', class_='sc-fLlhyt fKrYQk sc-14455254-0 sc-c5cd0085-9 ezNOEq dDNfcV')
+                    # Se o nome corresponde, extrai as outras informações dentro do mesmo bloco
+                    preco_tag = product_block.find('span', class_='sc-fLlhyt fKrYQk sc-14455254-0 sc-c5cd0085-9 ezNOEq dDNfcV')
                     preco_text = preco_tag.text.strip() if preco_tag else "Preço não encontrado"
                     
-                    descricao_tag = container.find('span', class_='sc-fLlhyt dPLwZv sc-14455254-0 sc-c5cd0085-10 ezNOEq krnAMj')
+                    descricao_tag = product_block.find('span', class_='sc-fLlhyt dPLwZv sc-14455254-0 sc-c5cd0085-10 ezNOEq krnAMj')
                     descricao_text = descricao_tag.text.strip() if descricao_tag else "Descrição não encontrada"
                     
-                    # Procura diretamente pela tag <img> dentro do contêiner do produto
-                    img_tag = container.find('img')
+                    # Procura a tag <img> diretamente dentro deste bloco de produto
+                    img_tag = product_block.find('img')
                     img_url = img_tag['src'] if img_tag and 'src' in img_tag.attrs else None
                     
                     return nome_text, preco_text, descricao_text, img_url
         
-        # Se nenhum produto correspondente for encontrado
+        # Se nenhum produto correspondente for encontrado após iterar por todos os blocos
         return "Nome não encontrado", "Preço não encontrado", "Descrição não encontrada", None
 
     except requests.exceptions.RequestException as e:
