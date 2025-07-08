@@ -1,32 +1,61 @@
-from selenium import webdriver
+import streamlit as st
+import requests
 from bs4 import BeautifulSoup
 
-def buscar_produto_shibata_selenium(url):
-    # Configurar o Selenium com Chrome
-    options = webdriver.ChromeOptions()
-    options.add_argument('--headless')  # Executar sem abrir o navegador
-    driver = webdriver.Chrome(options=options)
-    
-    driver.get(url)
-    soup = BeautifulSoup(driver.page_source, 'html.parser')
-    driver.quit()
+# Configuração da página
+st.set_page_config(page_title="Busca de Produtos Nagumo", page_icon="🛒")
 
-    # Buscar nome, preço e imagem como no exemplo anterior
-    title_tag = soup.find("title")
-    nome = title_tag.text.strip() if title_tag else "Nome não encontrado"
-    
-    preco_span = soup.find('span', class_='sc-c5cd0085-9')
-    preco = preco_span.text.strip() if preco_span else "Preço não encontrado"
-    
-    imagem_tag = soup.find('img', class_='sc-c5cd0085-2')
-    imagem_url = imagem_tag['src'] if imagem_tag and 'src' in imagem_tag.attrs else "Imagem não encontrada"
+# CSS para remover o espaço superior
+st.markdown("""
+    <style>
+        .block-container {
+            padding-top: 0rem; /* diminua esse valor para reduzir ou coloque 0 para remover totalmente */
+        }
+    </style>
+""", unsafe_allow_html=True)
 
-    return nome, preco, imagem_url
+# Título com fonte menor
+st.markdown("<h5>🛒Preços Nagumo</h5>", unsafe_allow_html=True)
 
-# URL de teste
-url_shibata = "https://www.nagumo.com.br/nagumo/74b2f698-cffc-4a38-b8ce-0407f8d98de3/busca/banana"
+busca = st.text_input("Digite o nome do produto:")
 
-nome, preco, imagem_url = buscar_produto_shibata_selenium(url_shibata)
-print(f"🛍️ Produto: {nome}")
-print(f"💰 Preço: {preco}")
-print(f"🖼️ Imagem: {imagem_url}")
+def buscar_produto_nagumo(palavra_chave):
+    palavra_chave_url = palavra_chave.strip().lower().replace(" ", "+")
+    url = f"https://www.nagumo.com.br/nagumo/74b2f698-cffc-4a38-b8ce-0407f8d98de3/busca/{palavra_chave_url}"
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"}
+
+    try:
+        r = requests.get(url, headers=headers, timeout=10)
+        r.raise_for_status()  # Levanta exceção para erros HTTP
+        soup = BeautifulSoup(r.text, 'html.parser')
+        search_words = set(palavra_chave.lower().split())
+        product_containers = soup.find_all('div', class_='sc-bczRLJ sc-f719e9b0-0 sc-c5cd0085-5 hJJyHP dbeope kekHxB')
+
+        for container in product_containers:
+            nome_tag = container.find('span', class_='sc-fLlhyt hJreDe sc-14455254-0 sc-c5cd0085-4 ezNOEq clsIKA')
+            if nome_tag:
+                nome_text = nome_tag.text.strip()
+                product_words = set(nome_text.lower().split())
+                if search_words.issubset(product_words):
+                    preco_tag = container.find('span', class_='sc-fLlhyt fKrYQk sc-14455254-0 sc-c5cd0085-9 ezNOEq dDNfcV')
+                    preco_text = preco_tag.text.strip() if preco_tag else "Preço não encontrado"
+                    descricao_tag = container.find('span', class_='sc-fLlhyt dPLwZv sc-14455254-0 sc-c5cd0085-10 ezNOEq krnAMj')
+                    descricao_text = descricao_tag.text.strip() if descricao_tag else "Descrição não encontrada"
+                    imagem_tag = container.find('img', class_='sc-c5cd0085-2')
+                    imagem_url = imagem_tag['src'] if imagem_tag and 'src' in imagem_tag.attrs else "Imagem não encontrada"
+                    return nome_text, preco_text, descricao_text, imagem_url
+        return "Nome não encontrado", "Preço não encontrado", "Descrição não encontrada", "Imagem não encontrada"
+
+    except Exception as e:
+        print(f"Erro na busca: {e}")
+        return "Erro na busca", "", "", "Imagem não encontrada"
+
+if busca:
+    nome, preco, imagem_url = buscar_produto_nagumo(busca)
+    st.write(f"**Produto:** {nome}")
+    st.write(f"**Preço:** {preco}")
+    st.write(f"**Descrição:** {nome}")
+    if imagem_url != "Imagem não encontrada":
+        st.image(imagem_url, caption="Imagem do produto", width=300)
+    else:
+        st.write("🖼️ **Imagem não encontrada**")
