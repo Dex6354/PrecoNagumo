@@ -91,8 +91,13 @@ if busca:
     st.write(f"**Preço:** {preco}")
     st.write(f"**Descrição:** {descricao}")
     
-    # Exibe a imagem diretamente. Se a URL for inválida ou não for uma imagem, o Streamlit pode não exibir nada.
-    st.image(img_url, caption=nome, width=200)
+    # Adiciona uma verificação para garantir que img_url não é None antes de tentar exibir a imagem
+    if img_url:
+        st.image(img_url, caption=nome, width=200)
+    else:
+        # Mensagem opcional se a imagem não for encontrada, mas o produto sim
+        if nome != "Nome não encontrado" and nome != "Erro na busca":
+            st.write("Imagem não encontrada para este produto.")
     
     if nome == "Nome não encontrado":
         st.write("Produto não encontrado.")
