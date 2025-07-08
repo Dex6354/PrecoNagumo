@@ -39,6 +39,9 @@ def buscar_produto_nagumo(palavra_chave):
             img_url = None
             product_identified = False
 
+            # Inicializa img_tag aqui para garantir que esteja sempre definida
+            img_tag = product_block.find('img') 
+
             # Primeiro, tenta encontrar o nome no span (onde o nome do produto geralmente aparece)
             nome_tag = product_block.find('span', class_='sc-fLlhyt hJreDe sc-14455254-0 sc-c5cd0085-4 ezNOEq clsIKA')
             if nome_tag:
@@ -49,8 +52,8 @@ def buscar_produto_nagumo(palavra_chave):
                     product_identified = True
             
             # Se não encontrar no span, tenta verificar o atributo 'alt' da imagem (muitas vezes contém o nome)
+            # Usa a img_tag já encontrada
             if not product_identified:
-                img_tag = product_block.find('img') # Encontra a imagem para checar o alt
                 if img_tag and 'alt' in img_tag.attrs:
                     img_alt_text = img_tag['alt'].strip()
                     img_alt_words = set(img_alt_text.lower().split())
