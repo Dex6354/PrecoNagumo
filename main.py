@@ -2,9 +2,20 @@ import streamlit as st
 import requests
 from bs4 import BeautifulSoup
 
+# Configuração da página
 st.set_page_config(page_title="Busca de Produtos Nagumo", page_icon="🛒")
 
-st.markdown("<h5>🛒 Preços Nagumo</h5>", unsafe_allow_html=True)
+# CSS para remover o espaço superior
+st.markdown("""
+    <style>
+        .block-container {
+            padding-top: 1rem; /* diminua esse valor para reduzir ou coloque 0 para remover totalmente */
+        }
+    </style>
+""", unsafe_allow_html=True)
+
+# Título com fonte menor
+st.markdown("<h5>🛒Preços Nagumo</h5>", unsafe_allow_html=True)
 
 busca = st.text_input("Digite o nome do produto:")
 
