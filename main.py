@@ -1,3 +1,24 @@
+import streamlit as st
+import requests
+from bs4 import BeautifulSoup
+
+# Configuração da página
+st.set_page_config(page_title="Busca de Produtos Nagumo", page_icon="🛒")
+
+# CSS para remover espaço superior e rodapé
+st.markdown("""
+    <style>
+        .block-container { padding-top: 0rem; }
+        footer {visibility: hidden;}
+        #MainMenu {visibility: hidden;}
+    </style>
+""", unsafe_allow_html=True)
+
+# Título
+st.markdown("<h5>🛒 Preços Nagumo</h5>", unsafe_allow_html=True)
+
+busca = st.text_input("Digite o nome do produto:")
+
 def buscar_produto_nagumo(palavra_chave):
     palavra_chave_url = palavra_chave.strip().lower().replace(" ", "+")
     url = f"https://www.nagumo.com.br/nagumo/74b2f698-cffc-4a38-b8ce-0407f8d98de3/busca/{palavra_chave_url}"
@@ -20,23 +41,18 @@ def buscar_produto_nagumo(palavra_chave):
             if not search_words.intersection(product_words):
                 continue
 
-            # Preço atual promocional
-            preco_promocao_tag = container.find('span', class_='sc-fLlhyt gMFJKu sc-14455254-0 sc-c5cd0085-9 ezNOEq dDNfcV')
-            preco_promocao = preco_promocao_tag.text.strip() if preco_promocao_tag else None
+            # Verifica preço promocional
+            preco_promo_tag = container.find('span', class_='sc-fLlhyt gMFJKu sc-14455254-0 sc-c5cd0085-9 ezNOEq dDNfcV')
+            preco_text = preco_promo_tag.text.strip() if preco_promo_tag else None
 
-            # Preço antigo
+            # Verifica preço original e desconto
             preco_antigo_tag = container.find('span', class_='sc-fLlhyt ehGA-Dk sc-14455254-0 sc-c5cd0085-12 ezNOEq bFqXWZ')
-            preco_antigo = preco_antigo_tag.text.strip() if preco_antigo_tag else None
-
-            # Percentual de desconto
             desconto_tag = container.find('span', class_='sc-fLlhyt hJreDe sc-14455254-0 sc-c5cd0085-11 ezNOEq hoiAgS')
-            desconto = desconto_tag.text.strip() if desconto_tag else None
 
-            # Monta o preço final de acordo com os dados encontrados
-            if preco_promocao and preco_antigo and desconto:
-                preco_text = f"{preco_promocao} ({preco_antigo} {desconto})"
-            elif preco_promocao:
-                preco_text = preco_promocao
+            if preco_promo_tag and preco_antigo_tag and desconto_tag:
+                preco_text = f"{preco_promo_tag.text.strip()} ({preco_antigo_tag.text.strip()} {desconto_tag.text.strip()})"
+            elif preco_promo_tag:
+                preco_text = preco_promo_tag.text.strip()
             else:
                 preco_text = "Preço não encontrado"
 
@@ -57,3 +73,11 @@ def buscar_produto_nagumo(palavra_chave):
 
     except Exception as e:
         return "Erro na busca", "", "", str(e)
+
+if busca:
+    nome, preco, descricao, imagem = buscar_produto_nagumo(busca)
+    st.write(f"**Produto:** {nome}")
+    st.write(f"**Preço:** {preco}")
+    st.write(f"**Descrição:** {descricao}")
+    if imagem != "Imagem não encontrada":
+        st.image(imagem, width=200)
