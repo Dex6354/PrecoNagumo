@@ -41,7 +41,6 @@ def buscar_produto_nagumo(palavra_chave):
             if not search_words.intersection(product_words):
                 continue
 
-
 # Verifica preço promocional
 preco_promo_tag = container.find('span', class_='sc-fLlhyt gMFJKu sc-14455254-0 sc-c5cd0085-9 ezNOEq dDNfcV')
 preco_text = preco_promo_tag.text.strip() if preco_promo_tag else None
@@ -68,11 +67,7 @@ else:
             preco_text = f"R$ {preco_fallback_tag.text.strip().replace('R', '').replace(',', '.')}" if preco_fallback_tag else "Preço não encontrado"
         else:
             preco_text = "Preço não encontrado"
-
-
-
-
-
+            
             descricao_tag = container.find('span', class_='sc-fLlhyt dPLwZv sc-14455254-0 sc-c5cd0085-10 ezNOEq krnAMj')
             descricao_text = descricao_tag.text.strip() if descricao_tag else "Descrição não encontrada"
 
