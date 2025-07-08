@@ -4,7 +4,7 @@ from bs4 import BeautifulSoup
 
 st.set_page_config(page_title="Busca de Produtos Nagumo", page_icon="🛒")
 
-st.title("🛒 Buscador de Preços Nagumo")
+st.markdown("<h3>🛒 Buscador de Preços Nagumo</h3>", unsafe_allow_html=True)
 
 busca = st.text_input("Digite o nome do produto:")
 
