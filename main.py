@@ -38,16 +38,33 @@ def buscar_produto_nagumo(palavra_chave):
                 if search_words.issubset(product_words):
                     preco_tag = container.find('span', class_='sc-fLlhyt fKrYQk sc-14455254-0 sc-c5cd0085-9 ezNOEq dDNfcV')
                     preco_text = preco_tag.text.strip() if preco_tag else "Preço não encontrado"
+                    
                     descricao_tag = container.find('span', class_='sc-fLlhyt dPLwZv sc-14455254-0 sc-c5cd0085-10 ezNOEq krnAMj')
                     descricao_text = descricao_tag.text.strip() if descricao_tag else "Descrição não encontrada"
-                    return nome_text, preco_text, descricao_text
-        return "Nome não encontrado", "Preço não encontrado", "Descrição não encontrada"
+                    
+                    # Encontrar a tag <img> e extrair o atributo src
+                    img_tag = container.find('img')
+                    img_url = img_tag['src'] if img_tag and 'src' in img_tag.attrs else None
+                    
+                    return nome_text, preco_text, descricao_text, img_url
+        
+        return "Nome não encontrado", "Preço não encontrado", "Descrição não encontrada", None
 
-    except:
-        return "Erro na busca", "", ""
+    except requests.exceptions.RequestException as e:
+        st.error(f"Erro de conexão: {e}")
+        return "Erro na busca", "", "", None
+    except Exception as e:
+        st.error(f"Ocorreu um erro inesperado: {e}")
+        return "Erro na busca", "", "", None
 
 if busca:
-    nome, preco, descricao = buscar_produto_nagumo(busca)
+    nome, preco, descricao, imagem_url = buscar_produto_nagumo(busca)
     st.write(f"**Produto:** {nome}")
     st.write(f"**Preço:** {preco}")
     st.write(f"**Descrição:** {descricao}")
+    
+    if imagem_url:
+        st.image(imagem_url, caption=nome, width=200)
+    elif nome != "Nome não encontrado" and nome != "Erro na busca": # Only show if product was found but image wasn't
+        st.write("Imagem não encontrada para este produto.")
+
