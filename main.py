@@ -19,56 +19,58 @@ st.markdown("<h5>🛒 Preço Nagumo</h5>", unsafe_allow_html=True)
 
 busca = st.text_input("Digite o nome do produto:")
 
+def limpar_preco(texto):
+    # Remove quebras de linha e espaços extras
+    texto = texto.replace('\n', '').replace('\r', '').replace(' ', '')
+    # Garante que comece com "R$"
+    if texto.startswith('R') and not texto.startswith('R$'):
+        texto = texto.replace('R', 'R$', 1)
+    return texto
+
 def buscar_produto_nagumo(palavra_chave):
     palavra_chave_url = palavra_chave.strip().lower().replace(" ", "+")
     url = f"https://www.nagumo.com.br/nagumo/74b2f698-cffc-4a38-b8ce-0407f8d98de3/busca/{palavra_chave_url}"
     headers = {"User-Agent": "Mozilla/5.0"}
+
     try:
         r = requests.get(url, headers=headers, timeout=10)
         soup = BeautifulSoup(r.text, 'html.parser')
+
         product_containers = soup.find_all('div', class_='sc-c5cd0085-0 fWmXTW')
 
         for container in product_containers:
             nome_tag = container.find('span', class_='sc-fLlhyt hJreDe sc-14455254-0 sc-c5cd0085-4 ezNOEq clsIKA')
             if not nome_tag:
                 continue
-            nome_text = nome_tag.text.strip()
 
+            nome_text = nome_tag.text.strip()
             search_words = set(palavra_chave.lower().split())
             product_words = set(nome_text.lower().split())
-
             if not search_words.intersection(product_words):
                 continue
 
-            preco_text = "Preço não encontrado"
-
-            # Busca preço promocional
             preco_promo_tag = container.find('span', class_='sc-fLlhyt gMFJKu sc-14455254-0 sc-c5cd0085-9 ezNOEq dDNfcV')
             preco_antigo_tag = container.find('span', class_='sc-fLlhyt ehGA-Dk sc-14455254-0 sc-c5cd0085-12 ezNOEq bFqXWZ')
             desconto_tag = container.find('span', class_='sc-fLlhyt hJreDe sc-14455254-0 sc-c5cd0085-11 ezNOEq hoiAgS')
 
             if preco_promo_tag and preco_antigo_tag and desconto_tag:
-                # Preço com promoção: "R$ [preço_promo] (R$ [preco_antigo] -[desconto]%)"
-                preco_promocional_str = preco_promo_tag.text.strip().replace('R', 'R$ ').replace(',','')
-                preco_antigo_str = preco_antigo_tag.text.strip().replace('R', 'R$ ').replace(',','')
-                desconto_str = desconto_tag.text.strip()
-                preco_text = f"{preco_promocional_str} ({preco_antigo_str} {desconto_str})"
+                preco_atual = limpar_preco(preco_promo_tag.text)
+                preco_velho = limpar_preco(preco_antigo_tag.text)
+                desconto = desconto_tag.text.strip().replace('\n', '').replace('\r', '').replace(' ', '')
+                preco_text = f"{preco_atual} ({preco_velho} {desconto})"
             elif preco_promo_tag:
-                # Preço promocional sem o preço antigo e desconto (apenas o preço atual)
-                preco_text = preco_promo_tag.text.strip().replace('R', 'R$ ').replace(',','')
+                preco_text = limpar_preco(preco_promo_tag.text)
             else:
-                # Preço normal
                 preco_normal_tag = container.find('span', class_='sc-fLlhyt fKrYQk sc-14455254-0 sc-c5cd0085-9 ezNOEq dDNfcV')
                 if preco_normal_tag:
-                    preco_text = preco_normal_tag.text.strip().replace('R', 'R$ ').replace(',','')
+                    preco_text = limpar_preco(preco_normal_tag.text)
                 else:
-                    # Fallback para encontrar qualquer preço se as classes acima falharem
                     preco_container = container.find('div', class_='sc-c5cd0085-7')
                     if preco_container:
                         preco_fallback_tag = preco_container.find('span', class_=lambda x: x and 'sc-fLlhyt' in x and 'ezNOEq' in x)
-                        if preco_fallback_tag:
-                            preco_text = preco_fallback_tag.text.strip().replace('R', 'R$ ').replace(',','')
-
+                        preco_text = preco_fallback_tag.text.strip() if preco_fallback_tag else "Preço não encontrado"
+                    else:
+                        preco_text = "Preço não encontrado"
 
             descricao_tag = container.find('span', class_='sc-fLlhyt dPLwZv sc-14455254-0 sc-c5cd0085-10 ezNOEq krnAMj')
             descricao_text = descricao_tag.text.strip() if descricao_tag else "Descrição não encontrada"
@@ -84,6 +86,7 @@ def buscar_produto_nagumo(palavra_chave):
             return nome_text, preco_text, descricao_text, imagem_url
 
         return "Nome não encontrado", "Preço não encontrado", "Descrição não encontrada", "Imagem não encontrada"
+
     except Exception as e:
         return "Erro na busca", "", "", str(e)
 
