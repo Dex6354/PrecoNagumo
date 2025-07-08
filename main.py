@@ -29,7 +29,7 @@ def buscar_produto_nagumo(palavra_chave):
         soup = BeautifulSoup(r.text, 'html.parser')
         search_words = set(palavra_chave.lower().split())
         
-        # Procura por todos os contêineres de produto usando o atributo aria-label
+        # Procura por todos os contêineres de produto usando a classe principal
         all_product_blocks = soup.find_all('div', class_='sc-c5cd0085-0 fWmXTW')
 
         for product_block in all_product_blocks:
@@ -67,25 +67,11 @@ def buscar_produto_nagumo(palavra_chave):
                 descricao_tag = product_block.find('span', class_='sc-fLlhyt dPLwZv sc-14455254-0 sc-c5cd0085-10 ezNOEq krnAMj')
                 descricao_text = descricao_tag.text.strip() if descricao_tag else "Descrição não encontrada"
                 
-                # --- Lógica para encontrar a URL da imagem com base na estrutura fornecida ---
-                # Procura pela div específica que contém a imagem
-                image_container_div = product_block.find('div', class_='sc-bczRLJ sc-f719e9b0-0 sc-c5cd0085-2 hJJyHP dbeope eKZaNO')
-                
-                if image_container_div:
-                    img_tag = image_container_div.find('img')
-                    if img_tag and 'src' in img_tag.attrs:
-                        img_url = img_tag['src']
-                        # Se a URL for um placeholder (data:image/gif), tentamos o srcset como fallback
-                        if img_url.startswith('data:image/gif') and 'srcset' in img_tag.attrs:
-                            srcset = img_tag['srcset']
-                            # Pega a primeira URL do srcset
-                            first_src_entry = srcset.split(',')[0].strip()
-                            img_url_from_srcset = first_src_entry.split(' ')[0]
-                            # Se for um caminho relativo, constrói a URL completa
-                            if img_url_from_srcset.startswith('/'):
-                                img_url = f"https://www.nagumo.com.br{img_url_from_srcset}"
-                            else:
-                                img_url = img_url_from_srcset # Já é uma URL absoluta
+                # --- Lógica para encontrar a URL da imagem exatamente como está no 'src' ---
+                # Procura a tag <img> dentro do bloco do produto
+                img_tag = product_block.find('img')
+                if img_tag and 'src' in img_tag.attrs:
+                    img_url = img_tag['src'] # Pega o 'src' diretamente, sem edições
                 
                 return nome_text, preco_text, descricao_text, img_url
         
@@ -105,9 +91,8 @@ if busca:
     st.write(f"**Preço:** {preco}")
     st.write(f"**Descrição:** {descricao}")
     
-    # Exibe a imagem diretamente. Se a URL for inválida, o Streamlit não exibirá nada.
-    st.image(imagem_url, caption=nome, width=200)
+    # Exibe a imagem diretamente. Se a URL for inválida ou não for uma imagem, o Streamlit pode não exibir nada.
+    st.image(img_url, caption=nome, width=200)
     
     if nome == "Nome não encontrado":
         st.write("Produto não encontrado.")
-
