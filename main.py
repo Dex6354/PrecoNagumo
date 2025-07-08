@@ -8,15 +8,11 @@ st.set_page_config(page_title="Busca de Produtos Nagumo", page_icon="🛒")
 # CSS para remover o espaço superior
 st.markdown("""
     <style>
-        /* Esconde rodapé */
-        footer {visibility: hidden;}
-        /* Esconde botão fullscreen */
-        button[title="Toggle fullscreen"] {
-            display: none !important;
+        .block-container {
+            padding-top: 0rem; /* diminua esse valor para reduzir ou coloque 0 para remover totalmente */
         }
     </style>
 """, unsafe_allow_html=True)
-
 
 # Título com fonte menor
 st.markdown("<h5>🛒Preços Nagumo</h5>", unsafe_allow_html=True)
