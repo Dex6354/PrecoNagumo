@@ -21,7 +21,8 @@ busca = st.text_input("Digite o nome do produto:")
 
 def buscar_produto_nagumo(palavra_chave):
     palavra_chave_url = palavra_chave.strip().lower().replace(" ", "+")
-    url = f"https://www.nagumo.com.br/nagumo/74b2f692-cffc-4a38-b8ce-0407f8d98de3/busca/{palavra_chave_url}" # Corrigido o ID da loja para o padrão comum
+    # Revertido o ID da loja para o original que estava funcionando
+    url = f"https://www.nagumo.com.br/nagumo/74b2f698-cffc-4a38-b8ce-0407f8d98de3/busca/{palavra_chave_url}" 
     headers = {"User-Agent": "Mozilla/5.0"}
 
     try:
@@ -74,4 +75,3 @@ if busca:
         st.write("Imagem não encontrada para este produto.")
     elif nome == "Nome não encontrado":
         st.write("Produto não encontrado.")
-
