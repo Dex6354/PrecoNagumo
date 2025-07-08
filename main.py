@@ -13,6 +13,16 @@ st.markdown("""
         }
     </style>
 """, unsafe_allow_html=True)
+st.markdown("""
+    <style>
+        /* Esconde rodapé */
+        footer {visibility: hidden;}
+        /* Esconde botão fullscreen */
+        button[title="Toggle fullscreen"] {
+            display: none !important;
+        }
+    </style>
+""", unsafe_allow_html=True)
 
 # Título com fonte menor
 st.markdown("<h5>🛒Preços Nagumo</h5>", unsafe_allow_html=True)
