@@ -9,7 +9,7 @@ st.set_page_config(page_title="Busca de Produtos Nagumo", page_icon="🛒")
 st.markdown("""
     <style>
         .block-container {
-            padding-top: 1rem; /* diminua esse valor para reduzir ou coloque 0 para remover totalmente */
+            padding-top: 0rem; /* diminua esse valor para reduzir ou coloque 0 para remover totalmente */
         }
     </style>
 """, unsafe_allow_html=True)
