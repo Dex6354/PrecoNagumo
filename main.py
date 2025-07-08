@@ -7,44 +7,42 @@ def buscar_produto_nagumo(palavra_chave):
         r = requests.get(url, headers=headers, timeout=10)
         soup = BeautifulSoup(r.text, 'html.parser')
 
-        product_containers = soup.find_all('div', class_='sc-bczRLJ sc-f719e9b0-0 sc-c5cd0085-5 hJJyHP dbeope kekHxB')
+        product_containers = soup.find_all('div', class_='sc-c5cd0085-0 fWmXTW')
 
         for container in product_containers:
             nome_tag = container.find('span', class_='sc-fLlhyt hJreDe sc-14455254-0 sc-c5cd0085-4 ezNOEq clsIKA')
             if not nome_tag:
                 continue
+
             nome_text = nome_tag.text.strip()
             search_words = set(palavra_chave.lower().split())
             product_words = set(nome_text.lower().split())
-            if not search_words.issubset(product_words):
+            if not search_words.intersection(product_words):
                 continue
 
-            # Buscando preço promocional (classe com color="positive")
-            preco_promocional_tag = container.find('span', class_='sc-fLlhyt gMFJKu sc-14455254-0 sc-c5cd0085-9 ezNOEq dDNfcV')
-            preco_promocional = preco_promocional_tag.text.strip() if preco_promocional_tag else None
+            # Preço atual promocional
+            preco_promocao_tag = container.find('span', class_='sc-fLlhyt gMFJKu sc-14455254-0 sc-c5cd0085-9 ezNOEq dDNfcV')
+            preco_promocao = preco_promocao_tag.text.strip() if preco_promocao_tag else None
 
-            # Buscando preço antigo (classe com color="grayDarker")
+            # Preço antigo
             preco_antigo_tag = container.find('span', class_='sc-fLlhyt ehGA-Dk sc-14455254-0 sc-c5cd0085-12 ezNOEq bFqXWZ')
             preco_antigo = preco_antigo_tag.text.strip() if preco_antigo_tag else None
 
-            # Buscando percentual de desconto
+            # Percentual de desconto
             desconto_tag = container.find('span', class_='sc-fLlhyt hJreDe sc-14455254-0 sc-c5cd0085-11 ezNOEq hoiAgS')
             desconto = desconto_tag.text.strip() if desconto_tag else None
 
-            if preco_promocional:
-                preco_text = f"{preco_promocional}"
-                if preco_antigo and desconto:
-                    preco_text += f" ({preco_antigo} {desconto})"
+            # Monta o preço final de acordo com os dados encontrados
+            if preco_promocao and preco_antigo and desconto:
+                preco_text = f"{preco_promocao} ({preco_antigo} {desconto})"
+            elif preco_promocao:
+                preco_text = preco_promocao
             else:
-                # Sem promoção, pega o preço normal padrão (classe diferente)
-                preco_tag = container.find('span', class_='sc-fLlhyt fKrYQk sc-14455254-0 sc-c5cd0085-9 ezNOEq dDNfcV')
-                preco_text = preco_tag.text.strip() if preco_tag else "Preço não encontrado"
+                preco_text = "Preço não encontrado"
 
-            # Descrição
             descricao_tag = container.find('span', class_='sc-fLlhyt dPLwZv sc-14455254-0 sc-c5cd0085-10 ezNOEq krnAMj')
             descricao_text = descricao_tag.text.strip() if descricao_tag else "Descrição não encontrada"
 
-            # Imagem
             imagem_url = "Imagem não encontrada"
             noscript_tag = container.find('noscript')
             if noscript_tag:
