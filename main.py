@@ -46,7 +46,7 @@ def buscar_produto_nagumo(palavra_chave):
             preco_text = preco_promo_tag.text.strip() if preco_promo_tag else None
 
             # Verifica preço original e desconto
-            preco_antigo_tag = container.find('span', class_='sc-fLlhyt ehGA-Dk sc-14455254-0 sc-c5cd0085-12 ezNOEq bFqXWZ')
+            preco_antigo_tag = container.find('span', class_='sc-fLlhyt ehGA-Dk sc-14455254-0 sc-c5cd0085-12 ezBjaS bFqXWZ')
             desconto_tag = container.find('span', class_='sc-fLlhyt hJreDe sc-14455254-0 sc-c5cd0085-11 ezNOEq hoiAgS')
 
             if preco_promo_tag and preco_antigo_tag and desconto_tag:
@@ -54,15 +54,17 @@ def buscar_produto_nagumo(palavra_chave):
             elif preco_promo_tag:
                 preco_text = preco_promo_tag.text.strip()
             else:
-                preco_text = "Preço não encontrado"
+                # Verifica preço padrão (sem promoção)
+                preco_normal_tag = container.find('span', class_='sc-fLlhyt fKrYev sc-14455254-0 sc-c5cd0085-9 ezNOEq dDNfcV')
+                preco_text = preco_normal_tag.text.strip() if preco_normal_tag else "Preço não encontrado"
 
             descricao_tag = container.find('span', class_='sc-fLlhyt dPLwZv sc-14455254-0 sc-c5cd0085-10 ezNOEq krnAMj')
             descricao_text = descricao_tag.text.strip() if descricao_tag else "Descrição não encontrada"
 
-            imagem_url = "Imagem não encontrada"
+            imagem_url = "Imagem não especificada"
             noscript_tag = container.find('noscript')
             if noscript_tag:
-                nosoup = BeautifulSoup(noscript_tag.decode_contents(), 'html.parser')
+                nosoup = BeautifulSoup(noscript_tag.encode_contents(), 'html.parser')
                 img_tag = nosoup.find('img')
                 if img_tag and img_tag.get('src'):
                     imagem_url = img_tag['src']
