@@ -29,32 +29,55 @@ def buscar_produto_nagumo(palavra_chave):
         soup = BeautifulSoup(r.text, 'html.parser')
         search_words = set(palavra_chave.lower().split())
         
-        # Procura por todos os contêineres de produto que parecem ser o bloco principal
-        # Baseado nos exemplos fornecidos, a classe 'sc-c5cd0085-0' com 'fWmXTW' parece ser o contêiner de cada item.
+        # Procura por todos os contêineres de produto que parecem ser o bloco principal,
+        # como "Banana Prata" e "Banana Nanica Kg" foram mostrados dentro desta estrutura.
         all_product_blocks = soup.find_all('div', class_='sc-c5cd0085-0 fWmXTW')
 
         for product_block in all_product_blocks:
-            # Tenta encontrar o nome do produto dentro deste bloco
-            nome_tag = product_block.find('span', class_='sc-fLlhyt hJreDe sc-14455254-0 sc-c5cd0085-4 ezNOEq clsIKA')
-            
-            if nome_tag:
-                nome_text = nome_tag.text.strip()
-                product_words = set(nome_text.lower().split())
+            nome_text = "Nome não encontrado"
+            preco_text = "Preço não encontrado"
+            descricao_text = "Descrição não encontrada"
+            img_url = None
+            product_identified = False
+
+            # Primeiro, tente encontrar a imagem e usar seu 'alt' para correspondência
+            img_tag = product_block.find('img')
+            if img_tag and 'alt' in img_tag.attrs:
+                img_alt_text = img_tag['alt'].strip()
+                img_alt_words = set(img_alt_text.lower().split())
                 
-                # Verifica se as palavras da busca estão contidas no nome do produto encontrado
-                if search_words.issubset(product_words):
-                    # Se o nome corresponde, extrai as outras informações dentro do mesmo bloco
-                    preco_tag = product_block.find('span', class_='sc-fLlhyt fKrYQk sc-14455254-0 sc-c5cd0085-9 ezNOEq dDNfcV')
-                    preco_text = preco_tag.text.strip() if preco_tag else "Preço não encontrado"
-                    
-                    descricao_tag = product_block.find('span', class_='sc-fLlhyt dPLwZv sc-14455254-0 sc-c5cd0085-10 ezNOEq krnAMj')
-                    descricao_text = descricao_tag.text.strip() if descricao_tag else "Descrição não encontrada"
-                    
-                    # Procura a tag <img> diretamente dentro deste bloco de produto
-                    img_tag = product_block.find('img')
-                    img_url = img_tag['src'] if img_tag and 'src' in img_tag.attrs else None
-                    
-                    return nome_text, preco_text, descricao_text, img_url
+                if search_words.issubset(img_alt_words):
+                    nome_text = img_alt_text  # Usa o texto alt como o nome principal
+                    img_url = img_tag['src'] if 'src' in img_tag.attrs else None
+                    product_identified = True
+            
+            # Se não foi identificado pela imagem, tente com o span de nome
+            if not product_identified:
+                nome_tag = product_block.find('span', class_='sc-fLlhyt hJreDe sc-14455254-0 sc-c5cd0085-4 ezNOEq clsIKA')
+                if nome_tag:
+                    span_name_text = nome_tag.text.strip()
+                    span_name_words = set(span_name_text.lower().split())
+                    if search_words.issubset(span_name_words):
+                        nome_text = span_name_text # Usa o texto do span como o nome
+                        # Se o nome foi encontrado pelo span, mas a imagem não tinha 'alt' que combinava,
+                        # ainda precisamos tentar pegar a imagem dentro desse bloco.
+                        if img_tag and 'src' in img_tag.attrs:
+                             img_url = img_tag['src']
+                        product_identified = True
+
+            # Se o produto foi identificado por qualquer um dos métodos, extraia o restante das informações
+            if product_identified:
+                preco_tag = product_block.find('span', class_='sc-fLlhyt fKrYQk sc-14455254-0 sc-c5cd0085-9 ezNOEq dDNfcV')
+                preco_text = preco_tag.text.strip() if preco_tag else "Preço não encontrado"
+                
+                descricao_tag = product_block.find('span', class_='sc-fLlhyt dPLwZv sc-14455254-0 sc-c5cd0085-10 ezNOEq krnAMj')
+                descricao_text = descricao_tag.text.strip() if descricao_tag else "Descrição não encontrada"
+                
+                # Se a imagem não foi definida acima (ex: img_tag não tinha alt), tenta pegar aqui
+                if not img_url and img_tag and 'src' in img_tag.attrs:
+                    img_url = img_tag['src']
+
+                return nome_text, preco_text, descricao_text, img_url
         
         # Se nenhum produto correspondente for encontrado após iterar por todos os blocos
         return "Nome não encontrado", "Preço não encontrado", "Descrição não encontrada", None
