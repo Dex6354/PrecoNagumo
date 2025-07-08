@@ -19,10 +19,15 @@ def buscar_imagem(palavra_chave):
         produtos = soup.find_all('div', class_='sc-c5cd0085-0 fWmXTW')
 
         for produto in produtos:
-            img_tag = produto.find('img')
-            if img_tag and img_tag.has_attr('alt') and palavra_chave.lower() in img_tag['alt'].lower():
-                return img_tag['src']
-        
+            nome_tag = produto.find('span', class_='sc-evZas fvrgXC sc-14455254-0 sc-c5cd0085-4 ezNOEq clsIKA')
+            if nome_tag and palavra_chave.lower() in nome_tag.text.lower():
+                # Aqui buscamos a div da imagem, dentro do produto
+                div_imagem = produto.find('div', class_='sc-bczRLJ sc-f719e9b0-0 sc-c5cd0085-2 hJJyHP dbeope eKZaNO')
+                if div_imagem:
+                    img_tag = div_imagem.find('img')
+                    if img_tag and img_tag.has_attr('src'):
+                        return img_tag['src']
+
         return None
 
     except Exception as e:
@@ -32,5 +37,6 @@ if busca:
     imagem_url = buscar_imagem(busca)
     if imagem_url:
         st.write(f"**Imagem encontrada:** {imagem_url}")
+        st.image(imagem_url, use_container_width=True)
     else:
         st.write("Imagem não encontrada.")
