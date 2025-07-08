@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 # Configuração da página
 st.set_page_config(page_title="Busca de Produtos Nagumo", page_icon="🛒")
 
-# CSS
+# CSS para remover espaço superior e rodapé
 st.markdown("""
     <style>
         .block-container { padding-top: 0rem; }
@@ -47,7 +47,6 @@ def buscar_produto_nagumo(palavra_chave):
             descricao_tag = container.find('span', class_='sc-fLlhyt dPLwZv sc-14455254-0 sc-c5cd0085-10 ezNOEq krnAMj')
             descricao_text = descricao_tag.text.strip() if descricao_tag else "Descrição não encontrada"
 
-            # Buscando imagem no <noscript> e retornando o link
             imagem_url = "Imagem não encontrada"
             noscript_tag = container.find('noscript')
             if noscript_tag:
@@ -68,6 +67,5 @@ if busca:
     st.write(f"**Produto:** {nome}")
     st.write(f"**Preço:** {preco}")
     st.write(f"**Descrição:** {descricao}")
-    st.write(f"**Link da imagem:** {imagem}")
     if imagem != "Imagem não encontrada":
         st.image(imagem, width=200)
