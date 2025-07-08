@@ -3,61 +3,33 @@ from bs4 import BeautifulSoup
 
 # ---------- NAGUMO ----------
 def buscar_produto_nagumo(url):
-    """
-    Busca o nome, preço e URL da imagem de um produto no site do Nagumo
-    a partir de uma URL de item específico.
-    """
     headers = {"User-Agent": "Mozilla/5.0"}
-    try:
-        r = requests.get(url, headers=headers, timeout=10)
-        r.raise_for_status() # Levanta um erro para códigos de status HTTP ruins (4xx ou 5xx)
-        soup = BeautifulSoup(r.text, 'html.parser')
+    r = requests.get(url, headers=headers)
+    soup = BeautifulSoup(r.text, 'html.parser')
 
-        # Buscar nome do produto
-        # O nome do produto em uma página de item geralmente está em um <h1> ou <span> específico
-        nome_tag = soup.find('span', class_='sc-fLlhyt fvrgXC sc-14455254-0 sc-c5cd0085-4 ezNOEq clsIKA')
-        if not nome_tag: # Fallback para h1 se a span não for encontrada
-            nome_tag = soup.find('h1')
-        nome_text = nome_tag.text.strip() if nome_tag else "Nome não encontrado"
+    # Nome do produto
+    nome = soup.find('h1')
+    nome_text = nome.text.strip() if nome else "Nome não encontrado"
 
-        # Buscar o preço
-        preco_text = "Preço não encontrado"
-        # A classe 'sc-fLlhyt fKrYQk sc-14455254-0 sc-c5cd0085-9 ezNOEq dDNfcV' é do preço
-        preco_span = soup.find('span', class_='sc-fLlhyt fKrYQk sc-14455254-0 sc-c5cd0085-9 ezNOEq dDNfcV')
-        if preco_span:
-            preco_text = preco_span.text.strip()
-        else: # Fallback para busca genérica de spans se a classe específica não for encontrada
-            spans = soup.find_all('span')
-            for span in spans:
-                texto = span.get_text(strip=True)
-                if texto.startswith('R$') and texto != 'R$ 0,00':
-                    preco_text = texto
-                    break
-        
-        # Buscar a URL da imagem do produto
-        img_url = None
-        # A div que contém a imagem principal do produto parece ter a classe 'sc-c5cd0085-2'
-        image_container_div = soup.find('div', class_='sc-bczRLJ sc-f719e9b0-0 sc-c5cd0085-2 hJJyHP dbeope eKZaNO')
-        if image_container_div:
-            img_tag = image_container_div.find('img')
-            if img_tag and 'src' in img_tag.attrs:
-                img_url = img_tag['src']
+    # Preço do produto
+    preco_text = "Preço não encontrado"
+    spans = soup.find_all('span')
+    for span in spans:
+        texto = span.get_text(strip=True)
+        if texto.startswith('R$') and texto != 'R$ 0,00':
+            preco_text = texto
+            break
 
-        return nome_text, preco_text, img_url # Retorna também a URL da imagem
+    # Imagem do produto
+    imagem_url = "Imagem não encontrada"
+    img_tag = soup.find('img', {'class': 'MuiCardMedia-root'})
+    if img_tag and img_tag.get('src'):
+        imagem_url = img_tag['src']
 
-    except requests.exceptions.RequestException as e:
-        print(f"Erro de conexão ao buscar Nagumo: {e}")
-        return "Erro na busca", "", None
-    except Exception as e:
-        print(f"Ocorreu um erro inesperado durante a busca do Nagumo: {e}")
-        return "Erro na busca", "", None
+    return nome_text, preco_text, imagem_url
 
 # ---------- SHIBATA ----------
 def buscar_produto_shibata_api():
-    """
-    Busca detalhes de um produto no Shibata usando a API.
-    Nota: O token de autorização e IDs podem expirar ou mudar.
-    """
     url = "https://services.vipcommerce.com.br/api-admin/v1/org/161/filial/1/centro_distribuicao/1/loja/produtos/16286/detalhes"
 
     headers = {
@@ -68,56 +40,46 @@ def buscar_produto_shibata_api():
         "User-Agent": "Mozilla/5.0"
     }
 
-    try:
-        response = requests.get(url, headers=headers, timeout=10)
-        response.raise_for_status() # Levanta um erro para códigos de status HTTP ruins
-        
+    response = requests.get(url, headers=headers)
+
+    if response.status_code == 200:
         produto = response.json()['data']['produto']
         nome = produto['descricao']
         preco_total = float(produto['preco'])
         preco_por_kg = float(produto['preco_original'])
         unidade = produto['unidade_sigla']
         peso_kg = produto['quantidade_unidade_diferente']
-        
-        # A API do Shibata não fornece a URL da imagem diretamente no JSON de detalhes do produto
-        # no exemplo fornecido. Se ela fornecesse, seria adicionada aqui.
-        imagem_url = None # Placeholder, pois a API não forneceu no exemplo
 
         return {
             "nome": nome,
             "preco_total": preco_total,
             "preco_por_kg": preco_por_kg,
             "unidade": unidade,
-            "peso_kg": peso_kg,
-            "imagem_url": imagem_url # Incluindo para consistência
+            "peso_kg": peso_kg
         }
-    except requests.exceptions.RequestException as e:
-        return {"erro": f"Erro de conexão ao buscar Shibata: {e}"}
-    except Exception as e:
-        return {"erro": f"Ocorreu um erro inesperado durante a busca do Shibata: {e}"}
+    else:
+        return {"erro": f"Erro {response.status_code}: {response.text}"}
 
 # ---------- EXECUÇÃO ----------
 
 # Nagumo
-# Usando a URL de um item específico para a "Banana Nanica Kg"
-url_nagumo_banana_nanica = "https://www.nagumo.com.br/nagumo/74b2f698-cffc-4a38-b8ce-0407f8d98de3/item/88ef3df3-64cc-4d29-8a2a-4e0862dfc3f8"
-nome_nagumo, preco_nagumo, imagem_url_nagumo = buscar_produto_nagumo(url_nagumo_banana_nanica)
+url_nagumo = "https://www.nagumo.com.br/nagumo/74b2f698-cffc-4a38-b8ce-0407f8d98de3/item/88ef3df3-64cc-4d29-8a2a-4e0862dfc3f8"
+nome_nagumo, preco_nagumo, imagem_nagumo = buscar_produto_nagumo(url_nagumo)
 
 # Shibata
-shibata_info = buscar_produto_shibata_api()
+shibata = buscar_produto_shibata_api()
 
 print("\n🔸 Comparativo de preços - Banana Nanica 🔸")
+
 print(f"🟦 Nagumo")
 print(f"  🛒 Produto: {nome_nagumo}")
 print(f"  💰 Preço: {preco_nagumo}")
-print(f"  🖼️ Imagem URL: {imagem_url_nagumo if imagem_url_nagumo else 'Não encontrada'}")
+print(f"  🖼️ Imagem: {imagem_nagumo}")
 
-if "erro" not in shibata_info:
+if "erro" not in shibata:
     print(f"\n🟥 Shibata")
-    print(f"  🛒 Produto: {shibata_info['nome']}")
-    print(f"  💰 Preço total: R$ {shibata_info['preco_total']:.2f} para {shibata_info['peso_kg']} {shibata_info['unidade']}")
-    print(f"  📏 Preço por kg: R$ {shibata_info['preco_por_kg']:.2f}")
-    # Se a API do Shibata retornasse a imagem, você poderia imprimir aqui:
-    # print(f"  🖼️ Imagem URL: {shibata_info['imagem_url']}")
+    print(f"  🛒 Produto: {shibata['nome']}")
+    print(f"  💰 Preço total: R$ {shibata['preco_total']:.2f} para {shibata['peso_kg']} {shibata['unidade']}")
+    print(f"  📏 Preço por kg: R$ {shibata['preco_por_kg']:.2f}")
 else:
-    print(f"\n🟥 Shibata: {shibata_info['erro']}")
+    print(f"\n🟥 Shibata: {shibata['erro']}")
