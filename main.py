@@ -14,8 +14,8 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Título com fonte menor
-st.markdown("<h5>🛒Preços Nagumo</h5>", unsafe_allow_html=True)
+# Título
+st.markdown("<h5>🛒 Preços Nagumo</h5>", unsafe_allow_html=True)
 
 busca = st.text_input("Digite o nome do produto:")
 
@@ -31,25 +31,31 @@ def buscar_produto_nagumo(palavra_chave):
         product_containers = soup.find_all('div', class_='sc-bczRLJ sc-f719e9b0-0 sc-c5cd0085-5 hJJyHP dbeope kekHxB')
 
         for container in product_containers:
+            # Nome do produto
             nome_tag = container.find('span', class_='sc-fLlhyt hJreDe sc-14455254-0 sc-c5cd0085-4 ezNOEq clsIKA')
             if nome_tag:
                 nome_text = nome_tag.text.strip()
                 product_words = set(nome_text.lower().split())
                 if search_words.issubset(product_words):
+                    # Preço
                     preco_tag = container.find('span', class_='sc-fLlhyt fKrYQk sc-14455254-0 sc-c5cd0085-9 ezNOEq dDNfcV')
                     preco_text = preco_tag.text.strip() if preco_tag else "Preço não encontrado"
+
+                    # Descrição
                     descricao_tag = container.find('span', class_='sc-fLlhyt dPLwZv sc-14455254-0 sc-c5cd0085-10 ezNOEq krnAMj')
                     descricao_text = descricao_tag.text.strip() if descricao_tag else "Descrição não encontrada"
 
-                    imagem_container = container.find_previous('div', class_='sc-bczRLJ sc-f719e9b0-0 sc-c5cd0085-2 hJJyHP dbeope eKZaNO')
-                    imagem_tag = imagem_container.find('img') if imagem_container else None
-                    imagem_src = imagem_tag['src'] if imagem_tag else None
+                    # Procurar imagem no ancestral comum
+                    ancestor = container.find_parent('div', class_='sc-c5cd0085-0 fWmXTW')
+                    imagem_tag = ancestor.find('img') if ancestor else None
+                    imagem_src = imagem_tag['src'] if imagem_tag and 'src' in imagem_tag.attrs else None
 
                     return nome_text, preco_text, descricao_text, imagem_src
+
         return "Nome não encontrado", "Preço não encontrado", "Descrição não encontrada", None
 
-    except:
-        return "Erro na busca", "", "", None
+    except Exception as e:
+        return f"Erro: {e}", "", "", None
 
 if busca:
     nome, preco, descricao, imagem = buscar_produto_nagumo(busca)
@@ -58,3 +64,4 @@ if busca:
     st.write(f"**Descrição:** {descricao}")
     if imagem:
         st.image(imagem, use_container_width=True)
+        st.write(f"**Imagem:** {imagem}")
