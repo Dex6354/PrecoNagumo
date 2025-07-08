@@ -50,20 +50,21 @@ def buscar_produto_nagumo(palavra_chave):
             desconto_tag = container.find('span', class_='sc-fLlhyt hJreDe sc-14455254-0 sc-c5cd0085-11 ezNOEq hoiAgS')
 
             if preco_promo_tag and preco_antigo_tag and desconto_tag:
-                preco_text = f"{preco_promo_tag.text.strip()} ({preco_antigo_tag.text.strip()} {desconto_tag.text.strip()})"
+                # Formata o preço promocional com R$ e o preço antigo com desconto entre parênteses
+                preco_text = f"R$ {preco_promo_tag.text.strip().replace('R', '').replace(',', '.')} (R$ {preco_antigo_tag.text.strip().replace('R', '').replace(',', '.')} {desconto_tag.text.strip()})"
             elif preco_promo_tag:
-                preco_text = preco_promo_tag.text.strip()
+                preco_text = f"R$ {preco_promo_tag.text.strip().replace('R', '').replace(',', '.')}"
             else:
                 # Verifica preço normal (usando a classe original)
                 preco_normal_tag = container.find('span', class_='sc-fLlhyt fKrYQk sc-14455254-0 sc-c5cd0085-9 ezNOEq dDNfcV')
                 if preco_normal_tag:
-                    preco_text = preco_normal_tag.text.strip()
+                    preco_text = f"R$ {preco_normal_tag.text.strip().replace('R', '').replace(',', '.')}"
                 else:
                     # Busca genérica por qualquer span dentro da div de preço
                     preco_container = container.find('div', class_='sc-c5cd0085-7')
                     if preco_container:
                         preco_fallback_tag = preco_container.find('span', class_=lambda x: x and 'sc-fLlhyt' in x and 'ezNOEq' in x)
-                        preco_text = preco_fallback_tag.text.strip() if preco_fallback_tag else "Preço não encontrado"
+                        preco_text = f"R$ {preco_fallback_tag.text.strip().replace('R', '').replace(',', '.')}" if preco_fallback_tag else "Preço não encontrado"
                     else:
                         preco_text = "Preço não encontrado"
 
