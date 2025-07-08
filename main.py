@@ -1,6 +1,7 @@
 import streamlit as st
 import requests
 from bs4 import BeautifulSoup
+import urllib.parse # Importa para analisar URLs
 
 # Configuração da página
 st.set_page_config(page_title="Busca de Produtos Nagumo", page_icon="🛒")
@@ -29,8 +30,6 @@ def buscar_produto_nagumo(palavra_chave):
         soup = BeautifulSoup(r.text, 'html.parser')
         search_words = set(palavra_chave.lower().split())
         
-        # Procura por todos os contêineres de produto que parecem ser o bloco principal,
-        # como "Banana Prata" e "Banana Nanica Kg" foram mostrados dentro desta estrutura.
         all_product_blocks = soup.find_all('div', class_='sc-c5cd0085-0 fWmXTW')
 
         for product_block in all_product_blocks:
@@ -40,18 +39,18 @@ def buscar_produto_nagumo(palavra_chave):
             img_url = None
             product_identified = False
 
-            # Primeiro, tente encontrar a imagem e usar seu 'alt' para correspondência
             img_tag = product_block.find('img')
+            
+            # --- Tenta identificar o produto pela imagem primeiro (alt text) ---
             if img_tag and 'alt' in img_tag.attrs:
                 img_alt_text = img_tag['alt'].strip()
                 img_alt_words = set(img_alt_text.lower().split())
                 
                 if search_words.issubset(img_alt_words):
-                    nome_text = img_alt_text  # Usa o texto alt como o nome principal
-                    img_url = img_tag['src'] if 'src' in img_tag.attrs else None
+                    nome_text = img_alt_text # Usa o texto alt como o nome principal
                     product_identified = True
             
-            # Se não foi identificado pela imagem, tente com o span de nome
+            # --- Se não identificado pela imagem, tenta pelo span de nome ---
             if not product_identified:
                 nome_tag = product_block.find('span', class_='sc-fLlhyt hJreDe sc-14455254-0 sc-c5cd0085-4 ezNOEq clsIKA')
                 if nome_tag:
@@ -59,13 +58,9 @@ def buscar_produto_nagumo(palavra_chave):
                     span_name_words = set(span_name_text.lower().split())
                     if search_words.issubset(span_name_words):
                         nome_text = span_name_text # Usa o texto do span como o nome
-                        # Se o nome foi encontrado pelo span, mas a imagem não tinha 'alt' que combinava,
-                        # ainda precisamos tentar pegar a imagem dentro desse bloco.
-                        if img_tag and 'src' in img_tag.attrs:
-                             img_url = img_tag['src']
                         product_identified = True
 
-            # Se o produto foi identificado por qualquer um dos métodos, extraia o restante das informações
+            # --- Se o produto foi identificado, extrai as informações e a URL da imagem ---
             if product_identified:
                 preco_tag = product_block.find('span', class_='sc-fLlhyt fKrYQk sc-14455254-0 sc-c5cd0085-9 ezNOEq dDNfcV')
                 preco_text = preco_tag.text.strip() if preco_tag else "Preço não encontrado"
@@ -73,13 +68,53 @@ def buscar_produto_nagumo(palavra_chave):
                 descricao_tag = product_block.find('span', class_='sc-fLlhyt dPLwZv sc-14455254-0 sc-c5cd0085-10 ezNOEq krnAMj')
                 descricao_text = descricao_tag.text.strip() if descricao_tag else "Descrição não encontrada"
                 
-                # Se a imagem não foi definida acima (ex: img_tag não tinha alt), tenta pegar aqui
-                if not img_url and img_tag and 'src' in img_tag.attrs:
-                    img_url = img_tag['src']
-
+                # --- Lógica de extração da URL da imagem ---
+                if img_tag:
+                    current_src = img_tag.get('src')
+                    
+                    # Se o 'src' não é um placeholder (data:image/gif), usa ele
+                    if current_src and not current_src.startswith('data:image/gif'):
+                        img_url = current_src
+                    else:
+                        # Se o 'src' é um placeholder, tenta pegar do 'srcset'
+                        srcset = img_tag.get('srcset')
+                        if srcset:
+                            # Pega a primeira URL do srcset (ex: "url 1x")
+                            first_src_entry = srcset.split(',')[0].strip()
+                            potential_url = first_src_entry.split(' ')[0] # Extrai apenas a parte da URL
+                            
+                            # Verifica se é uma URL de proxy do Next.js (ex: /_next/image?url=...)
+                            if "/_next/image" in potential_url:
+                                try:
+                                    # Analisa a URL do proxy para obter o parâmetro 'url' real
+                                    parsed_proxy_url = urllib.parse.urlparse(potential_url)
+                                    query_params = urllib.parse.parse_qs(parsed_proxy_url.query)
+                                    
+                                    if 'url' in query_params:
+                                        # O parâmetro 'url' contém o caminho da imagem real, possivelmente codificado
+                                        actual_image_path = query_params['url'][0]
+                                        # Garante que está totalmente decodificado (ex: %2F para /)
+                                        actual_image_path_decoded = urllib.parse.unquote(actual_image_path)
+                                        
+                                        # Se o caminho real da imagem começar com '/image/upload', é provável que seja do ifood
+                                        if actual_image_path_decoded.startswith('/image/upload'):
+                                            img_url = f"https://static-images.ifood.com.br{actual_image_path_decoded}"
+                                        else:
+                                            # Caso contrário, assume que é um caminho relativo ao domínio do Nagumo
+                                            img_url = f"https://www.nagumo.com.br{actual_image_path_decoded}"
+                                except Exception as e:
+                                    # Em caso de erro na análise da URL do proxy, apenas registra e não retorna imagem
+                                    print(f"Erro ao analisar URL de proxy do Next.js: {e}")
+                                    img_url = None 
+                            elif potential_url.startswith('/'):
+                                # Se for uma URL relativa padrão, prefixa com o domínio do Nagumo
+                                img_url = f"https://www.nagumo.com.br{potential_url}"
+                            else:
+                                img_url = potential_url # Assume que já é uma URL absoluta
+                
                 return nome_text, preco_text, descricao_text, img_url
         
-        # Se nenhum produto correspondente for encontrado após iterar por todos os blocos
+        # Se nenhum produto correspondente for encontrado
         return "Nome não encontrado", "Preço não encontrado", "Descrição não encontrada", None
 
     except requests.exceptions.RequestException as e:
