@@ -1,24 +1,3 @@
-import streamlit as st
-import requests
-from bs4 import BeautifulSoup
-
-# Configuração da página
-st.set_page_config(page_title="Busca de Produtos Nagumo", page_icon="🛒")
-
-# CSS para remover espaço superior e rodapé
-st.markdown("""
-    <style>
-        .block-container { padding-top: 0rem; }
-        footer {visibility: hidden;}
-        #MainMenu {visibility: hidden;}
-    </style>
-""", unsafe_allow_html=True)
-
-# Título
-st.markdown("<h5>🛒 Preços Nagumo</h5>", unsafe_allow_html=True)
-
-busca = st.text_input("Digite o nome do produto:")
-
 def buscar_produto_nagumo(palavra_chave):
     palavra_chave_url = palavra_chave.strip().lower().replace(" ", "+")
     url = f"https://www.nagumo.com.br/nagumo/74b2f698-cffc-4a38-b8ce-0407f8d98de3/busca/{palavra_chave_url}"
@@ -28,25 +7,44 @@ def buscar_produto_nagumo(palavra_chave):
         r = requests.get(url, headers=headers, timeout=10)
         soup = BeautifulSoup(r.text, 'html.parser')
 
-        product_containers = soup.find_all('div', class_='sc-c5cd0085-0 fWmXTW')
+        product_containers = soup.find_all('div', class_='sc-bczRLJ sc-f719e9b0-0 sc-c5cd0085-5 hJJyHP dbeope kekHxB')
 
         for container in product_containers:
             nome_tag = container.find('span', class_='sc-fLlhyt hJreDe sc-14455254-0 sc-c5cd0085-4 ezNOEq clsIKA')
             if not nome_tag:
                 continue
-
             nome_text = nome_tag.text.strip()
             search_words = set(palavra_chave.lower().split())
             product_words = set(nome_text.lower().split())
-            if not search_words.intersection(product_words):
+            if not search_words.issubset(product_words):
                 continue
 
-            preco_tag = container.find('span', class_='sc-fLlhyt fKrYQk sc-14455254-0 sc-c5cd0085-9 ezNOEq dDNfcV')
-            preco_text = preco_tag.text.strip() if preco_tag else "Preço não encontrado"
+            # Buscando preço promocional (classe com color="positive")
+            preco_promocional_tag = container.find('span', class_='sc-fLlhyt gMFJKu sc-14455254-0 sc-c5cd0085-9 ezNOEq dDNfcV')
+            preco_promocional = preco_promocional_tag.text.strip() if preco_promocional_tag else None
 
+            # Buscando preço antigo (classe com color="grayDarker")
+            preco_antigo_tag = container.find('span', class_='sc-fLlhyt ehGA-Dk sc-14455254-0 sc-c5cd0085-12 ezNOEq bFqXWZ')
+            preco_antigo = preco_antigo_tag.text.strip() if preco_antigo_tag else None
+
+            # Buscando percentual de desconto
+            desconto_tag = container.find('span', class_='sc-fLlhyt hJreDe sc-14455254-0 sc-c5cd0085-11 ezNOEq hoiAgS')
+            desconto = desconto_tag.text.strip() if desconto_tag else None
+
+            if preco_promocional:
+                preco_text = f"{preco_promocional}"
+                if preco_antigo and desconto:
+                    preco_text += f" ({preco_antigo} {desconto})"
+            else:
+                # Sem promoção, pega o preço normal padrão (classe diferente)
+                preco_tag = container.find('span', class_='sc-fLlhyt fKrYQk sc-14455254-0 sc-c5cd0085-9 ezNOEq dDNfcV')
+                preco_text = preco_tag.text.strip() if preco_tag else "Preço não encontrado"
+
+            # Descrição
             descricao_tag = container.find('span', class_='sc-fLlhyt dPLwZv sc-14455254-0 sc-c5cd0085-10 ezNOEq krnAMj')
             descricao_text = descricao_tag.text.strip() if descricao_tag else "Descrição não encontrada"
 
+            # Imagem
             imagem_url = "Imagem não encontrada"
             noscript_tag = container.find('noscript')
             if noscript_tag:
@@ -61,11 +59,3 @@ def buscar_produto_nagumo(palavra_chave):
 
     except Exception as e:
         return "Erro na busca", "", "", str(e)
-
-if busca:
-    nome, preco, descricao, imagem = buscar_produto_nagumo(busca)
-    st.write(f"**Produto:** {nome}")
-    st.write(f"**Preço:** {preco}")
-    st.write(f"**Descrição:** {descricao}")
-    if imagem != "Imagem não encontrada":
-        st.image(imagem, width=200)
