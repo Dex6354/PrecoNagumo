@@ -19,14 +19,6 @@ st.markdown("<h5>🛒 Preço Nagumo</h5>", unsafe_allow_html=True)
 
 busca = st.text_input("Digite o nome do produto:")
 
-def limpar_preco(texto):
-    # Remove quebras de linha e espaços extras
-    texto = texto.replace('\n', '').replace('\r', '').replace(' ', '')
-    # Garante que comece com "R$"
-    if texto.startswith('R') and not texto.startswith('R$'):
-        texto = texto.replace('R', 'R$', 1)
-    return texto
-
 def buscar_produto_nagumo(palavra_chave):
     palavra_chave_url = palavra_chave.strip().lower().replace(" ", "+")
     url = f"https://www.nagumo.com.br/nagumo/74b2f698-cffc-4a38-b8ce-0407f8d98de3/busca/{palavra_chave_url}"
@@ -49,26 +41,30 @@ def buscar_produto_nagumo(palavra_chave):
             if not search_words.intersection(product_words):
                 continue
 
+            # Verifica preço promocional
             preco_promo_tag = container.find('span', class_='sc-fLlhyt gMFJKu sc-14455254-0 sc-c5cd0085-9 ezNOEq dDNfcV')
+            preco_text = preco_promo_tag.text.strip() if preco_promo_tag else None
+
+            # Verifica preço original e desconto
             preco_antigo_tag = container.find('span', class_='sc-fLlhyt ehGA-Dk sc-14455254-0 sc-c5cd0085-12 ezNOEq bFqXWZ')
             desconto_tag = container.find('span', class_='sc-fLlhyt hJreDe sc-14455254-0 sc-c5cd0085-11 ezNOEq hoiAgS')
 
             if preco_promo_tag and preco_antigo_tag and desconto_tag:
-                preco_atual = limpar_preco(preco_promo_tag.text)
-                preco_velho = limpar_preco(preco_antigo_tag.text)
-                desconto = desconto_tag.text.strip().replace('\n', '').replace('\r', '').replace(' ', '')
-                preco_text = f"{preco_atual} ({preco_velho} {desconto})"
+                # Formata o preço promocional com R$ e o preço antigo com desconto entre parênteses
+                preco_text = f"R$ {preco_promo_tag.text.strip().replace('R', '').replace(',', '.')} (R$ {preco_antigo_tag.text.strip().replace('R', '').replace(',', '.')} {desconto_tag.text.strip()})"
             elif preco_promo_tag:
-                preco_text = limpar_preco(preco_promo_tag.text)
+                preco_text = f"R$ {preco_promo_tag.text.strip().replace('R', '').replace(',', '.')}"
             else:
+                # Verifica preço normal (usando a classe original)
                 preco_normal_tag = container.find('span', class_='sc-fLlhyt fKrYQk sc-14455254-0 sc-c5cd0085-9 ezNOEq dDNfcV')
                 if preco_normal_tag:
-                    preco_text = limpar_preco(preco_normal_tag.text)
+                    preco_text = f"R$ {preco_normal_tag.text.strip().replace('R', '').replace(',', '.')}"
                 else:
+                    # Busca genérica por qualquer span dentro da div de preço
                     preco_container = container.find('div', class_='sc-c5cd0085-7')
                     if preco_container:
                         preco_fallback_tag = preco_container.find('span', class_=lambda x: x and 'sc-fLlhyt' in x and 'ezNOEq' in x)
-                        preco_text = preco_fallback_tag.text.strip() if preco_fallback_tag else "Preço não encontrado"
+                        preco_text = f"R$ {preco_fallback_tag.text.strip().replace('R', '').replace(',', '.')}" if preco_fallback_tag else "Preço não encontrado"
                     else:
                         preco_text = "Preço não encontrado"
 
