@@ -42,9 +42,14 @@ def buscar_produto_nagumo(palavra_chave):
                     descricao_tag = container.find('span', class_='sc-fLlhyt dPLwZv sc-14455254-0 sc-c5cd0085-10 ezNOEq krnAMj')
                     descricao_text = descricao_tag.text.strip() if descricao_tag else "Descrição não encontrada"
                     
-                    # Encontrar a tag <img> e extrair o atributo src
-                    img_tag = container.find('img')
-                    img_url = img_tag['src'] if img_tag and 'src' in img_tag.attrs else None
+                    # Encontrar a div específica que contém a imagem dentro do container do produto
+                    # A classe 'sc-c5cd0085-2' foi observada em exemplos de HTML fornecidos pelo usuário para a imagem
+                    image_div = container.find('div', class_='sc-bczRLJ sc-f719e9b0-0 sc-c5cd0085-2 hJJyHP dbeope eKZaNO')
+                    img_url = None
+                    if image_div:
+                        img_tag = image_div.find('img')
+                        if img_tag and 'src' in img_tag.attrs:
+                            img_url = img_tag['src']
                     
                     return nome_text, preco_text, descricao_text, img_url
         
@@ -67,4 +72,3 @@ if busca:
         st.image(imagem_url, caption=nome, width=200)
     elif nome != "Nome não encontrado" and nome != "Erro na busca": # Only show if product was found but image wasn't
         st.write("Imagem não encontrada para este produto.")
-
