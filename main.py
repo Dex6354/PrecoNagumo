@@ -29,7 +29,8 @@ def buscar_produto_nagumo(palavra_chave):
         soup = BeautifulSoup(r.text, 'html.parser')
         search_words = set(palavra_chave.lower().split())
         
-        # Procura por todos os contêineres de produto usando a classe principal
+        # Procura por todos os contêineres de produto que parecem ser o bloco principal
+        # Ex: <div aria-label="Banana Prata" class="sc-c5cd0085-0 fWmXTW">
         all_product_blocks = soup.find_all('div', class_='sc-c5cd0085-0 fWmXTW')
 
         for product_block in all_product_blocks:
@@ -39,10 +40,10 @@ def buscar_produto_nagumo(palavra_chave):
             img_url = None
             product_identified = False
 
-            # Tenta identificar o produto pelo 'alt' da imagem (se presente e correspondente)
-            img_tag_for_alt_check = product_block.find('img')
-            if img_tag_for_alt_check and 'alt' in img_tag_for_alt_check.attrs:
-                img_alt_text = img_tag_for_alt_check['alt'].strip()
+            # Tenta identificar o produto pelo 'alt' da imagem primeiro
+            img_tag = product_block.find('img')
+            if img_tag and 'alt' in img_tag.attrs:
+                img_alt_text = img_tag['alt'].strip()
                 img_alt_words = set(img_alt_text.lower().split())
                 if search_words.issubset(img_alt_words):
                     nome_text = img_alt_text
@@ -68,8 +69,7 @@ def buscar_produto_nagumo(palavra_chave):
                 descricao_text = descricao_tag.text.strip() if descricao_tag else "Descrição não encontrada"
                 
                 # --- Lógica para encontrar a URL da imagem exatamente como está no 'src' ---
-                # Procura a tag <img> dentro do bloco do produto
-                img_tag = product_block.find('img')
+                # Procura a tag <img> dentro do bloco do produto (já buscada acima)
                 if img_tag and 'src' in img_tag.attrs:
                     img_url = img_tag['src'] # Pega o 'src' diretamente, sem edições
                 
@@ -91,7 +91,7 @@ if busca:
     st.write(f"**Preço:** {preco}")
     st.write(f"**Descrição:** {descricao}")
     
-    # Adiciona uma verificação para garantir que img_url não é None antes de tentar exibir a imagem
+    # Verifica se img_url tem um valor antes de tentar exibir a imagem
     if img_url:
         st.image(img_url, caption=nome, width=200)
     else:
