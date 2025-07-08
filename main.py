@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 # Configuração da página
 st.set_page_config(page_title="Busca de Produtos Nagumo", page_icon="🛒")
 
-# CSS para remover o espaço superior e rodapé
+# CSS
 st.markdown("""
     <style>
         .block-container { padding-top: 0rem; }
@@ -14,7 +14,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Título com fonte menor
+# Título
 st.markdown("<h5>🛒 Preços Nagumo</h5>", unsafe_allow_html=True)
 
 busca = st.text_input("Digite o nome do produto:")
@@ -28,36 +28,32 @@ def buscar_produto_nagumo(palavra_chave):
         r = requests.get(url, headers=headers, timeout=10)
         soup = BeautifulSoup(r.text, 'html.parser')
 
-        # Localiza os containers de produtos
-        product_containers = soup.find_all('div', class_='sc-bczRLJ sc-f719e9b0-0 sc-c5cd0085-5 hJJyHP dbeope kekHxB')
+        product_containers = soup.find_all('div', class_='sc-c5cd0085-0 fWmXTW')
 
         for container in product_containers:
-            # Nome do produto
             nome_tag = container.find('span', class_='sc-fLlhyt hJreDe sc-14455254-0 sc-c5cd0085-4 ezNOEq clsIKA')
             if not nome_tag:
-                continue  # Se não tiver nome, ignora
+                continue
 
             nome_text = nome_tag.text.strip()
             search_words = set(palavra_chave.lower().split())
             product_words = set(nome_text.lower().split())
-            if not search_words.issubset(product_words):
-                continue  # Se não bater com a busca, ignora
+            if not search_words.intersection(product_words):
+                continue
 
-            # Preço
             preco_tag = container.find('span', class_='sc-fLlhyt fKrYQk sc-14455254-0 sc-c5cd0085-9 ezNOEq dDNfcV')
             preco_text = preco_tag.text.strip() if preco_tag else "Preço não encontrado"
 
-            # Descrição
             descricao_tag = container.find('span', class_='sc-fLlhyt dPLwZv sc-14455254-0 sc-c5cd0085-10 ezNOEq krnAMj')
             descricao_text = descricao_tag.text.strip() if descricao_tag else "Descrição não encontrada"
 
-            # Imagem dentro do <noscript>
+            # Buscando imagem no <noscript> e retornando o link
             imagem_url = "Imagem não encontrada"
             noscript_tag = container.find('noscript')
             if noscript_tag:
                 nosoup = BeautifulSoup(noscript_tag.decode_contents(), 'html.parser')
                 img_tag = nosoup.find('img')
-                if img_tag and img_tag.get('src') and not img_tag['src'].startswith('data:image'):
+                if img_tag and img_tag.get('src'):
                     imagem_url = img_tag['src']
 
             return nome_text, preco_text, descricao_text, imagem_url
@@ -72,7 +68,6 @@ if busca:
     st.write(f"**Produto:** {nome}")
     st.write(f"**Preço:** {preco}")
     st.write(f"**Descrição:** {descricao}")
+    st.write(f"**Link da imagem:** {imagem}")
     if imagem != "Imagem não encontrada":
         st.image(imagem, width=200)
-    else:
-        st.write(f"**Imagem:** {imagem}")
