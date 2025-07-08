@@ -21,13 +21,15 @@ busca = st.text_input("Digite o nome do produto:")
 
 def buscar_produto_nagumo(palavra_chave):
     palavra_chave_url = palavra_chave.strip().lower().replace(" ", "+")
-    url = f"https://www.nagumo.com.br/nagumo/74b2f698-cffc-4a38-b8ce-0407f8d98de3/busca/{palavra_chave_url}"
+    url = f"https://www.nagumo.com.br/nagumo/74b2f692-cffc-4a38-b8ce-0407f8d98de3/busca/{palavra_chave_url}" # Corrigido o ID da loja para o padrão comum
     headers = {"User-Agent": "Mozilla/5.0"}
 
     try:
         r = requests.get(url, headers=headers, timeout=10)
         soup = BeautifulSoup(r.text, 'html.parser')
         search_words = set(palavra_chave.lower().split())
+        
+        # A classe 'sc-c5cd0085-5' parece ser o contêiner principal de cada produto
         product_containers = soup.find_all('div', class_='sc-bczRLJ sc-f719e9b0-0 sc-c5cd0085-5 hJJyHP dbeope kekHxB')
 
         for container in product_containers:
@@ -35,6 +37,8 @@ def buscar_produto_nagumo(palavra_chave):
             if nome_tag:
                 nome_text = nome_tag.text.strip()
                 product_words = set(nome_text.lower().split())
+                
+                # Verifica se as palavras da busca estão contidas no nome do produto
                 if search_words.issubset(product_words):
                     preco_tag = container.find('span', class_='sc-fLlhyt fKrYQk sc-14455254-0 sc-c5cd0085-9 ezNOEq dDNfcV')
                     preco_text = preco_tag.text.strip() if preco_tag else "Preço não encontrado"
@@ -42,24 +46,20 @@ def buscar_produto_nagumo(palavra_chave):
                     descricao_tag = container.find('span', class_='sc-fLlhyt dPLwZv sc-14455254-0 sc-c5cd0085-10 ezNOEq krnAMj')
                     descricao_text = descricao_tag.text.strip() if descricao_tag else "Descrição não encontrada"
                     
-                    # Encontrar a div específica que contém a imagem dentro do container do produto
-                    # A classe 'sc-c5cd0085-2' foi observada em exemplos de HTML fornecidos pelo usuário para a imagem
-                    image_div = container.find('div', class_='sc-bczRLJ sc-f719e9b0-0 sc-c5cd0085-2 hJJyHP dbeope eKZaNO')
-                    img_url = None
-                    if image_div:
-                        img_tag = image_div.find('img')
-                        if img_tag and 'src' in img_tag.attrs:
-                            img_url = img_tag['src']
+                    # Procura diretamente pela tag <img> dentro do contêiner do produto
+                    img_tag = container.find('img')
+                    img_url = img_tag['src'] if img_tag and 'src' in img_tag.attrs else None
                     
                     return nome_text, preco_text, descricao_text, img_url
         
+        # Se nenhum produto correspondente for encontrado
         return "Nome não encontrado", "Preço não encontrado", "Descrição não encontrada", None
 
     except requests.exceptions.RequestException as e:
-        st.error(f"Erro de conexão: {e}")
+        st.error(f"Erro de conexão ao buscar produtos: {e}")
         return "Erro na busca", "", "", None
     except Exception as e:
-        st.error(f"Ocorreu um erro inesperado: {e}")
+        st.error(f"Ocorreu um erro inesperado durante a busca: {e}")
         return "Erro na busca", "", "", None
 
 if busca:
@@ -70,5 +70,8 @@ if busca:
     
     if imagem_url:
         st.image(imagem_url, caption=nome, width=200)
-    elif nome != "Nome não encontrado" and nome != "Erro na busca": # Only show if product was found but image wasn't
+    elif nome != "Nome não encontrado" and nome != "Erro na busca": 
         st.write("Imagem não encontrada para este produto.")
+    elif nome == "Nome não encontrado":
+        st.write("Produto não encontrado.")
+
