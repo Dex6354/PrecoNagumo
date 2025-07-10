@@ -61,7 +61,6 @@ def calcular_preco_unitario(preco_str, descricao, nome):
                 preco_unitario = f"📏 ~ R$ {preco_valor_unitario:.2f}/rolo"
                 unidade_tipo = "rolo"
 
-    # Detectar metros por item e quantidade
     metros_por_item = None
     quantidade_itens = None
 
@@ -111,19 +110,21 @@ def buscar_produtos_nagumo(palavra_chave):
             desconto_tag = container.find('span', class_='sc-fLlhyt hJreDe sc-14455254-0 sc-c5cd0085-11 ezNOEq hoiAgS')
 
             if preco_promo_tag and preco_antigo_tag and desconto_tag:
-                preco_promocional = preco_promo_tag.text.strip()
+                preco_promocional = preco_promo_tag.text.strip().replace("R$", "").strip()
                 preco_antigo = preco_antigo_tag.text.strip().replace("R$", "").strip()
                 desconto = desconto_tag.text.strip()
-                preco_text = f"R$ {preco_promocional.replace('R$', '').strip()} (🔻💲{preco_antigo} {desconto})"
+                preco_text = f"💰 R$ {preco_promocional} (💲{preco_antigo}🔻 {desconto})"
                 preco_base = preco_promocional
             elif preco_promo_tag:
-                preco_text = preco_promo_tag.text.strip()
-                preco_base = preco_promo_tag.text.strip()
+                preco = preco_promo_tag.text.strip().replace("R$", "").strip()
+                preco_text = f"💰 R$ {preco}"
+                preco_base = preco
             else:
                 preco_normal_tag = container.find('span', class_='sc-fLlhyt fKrYQk sc-14455254-0 sc-c5cd0085-9 ezNOEq dDNfcV')
                 if preco_normal_tag:
-                    preco_text = preco_normal_tag.text.strip()
-                    preco_base = preco_normal_tag.text.strip()
+                    preco = preco_normal_tag.text.strip().replace("R$", "").strip()
+                    preco_text = f"💰 R$ {preco}"
+                    preco_base = preco
                 else:
                     preco_base = "0"
 
@@ -166,10 +167,11 @@ if busca:
                         st.write("Sem imagem")
                 with col2:
                     st.markdown(f"**{produto['nome']}**")
-                    st.markdown(f"💰 **Preço:** {produto['preco']}")
+                    st.markdown(f"{produto['preco']}")
                     if produto["preco_unitario"]:
                         st.markdown(f"{produto['preco_unitario']}")
                     st.markdown(f"📝 {produto['descricao']}")
                 st.markdown("---")
     else:
         st.write("Nenhum produto encontrado.")
+    
