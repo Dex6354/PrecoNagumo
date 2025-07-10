@@ -97,76 +97,76 @@ def extrair_valor_unitario(preco_unitario_str):
         return float(m.group(1).replace(',', '.'))
     return float('inf')
 
-def buscar_produtos_nagumo_multiplas(busca, tentativas=3):
+def buscar_produtos_nagumo(busca):
     produtos_unicos = {}
     headers = {"User-Agent": "Mozilla/5.0"}
     palavra_chave_url = busca.strip().lower().replace(" ", "+")
     url_base = f"https://www.nagumo.com.br/nagumo/74b2f698-cffc-4a38-b8ce-0407f8d98de3/busca/{palavra_chave_url}"
 
-    for _ in range(tentativas):
-        try:
-            r = requests.get(url_base, headers=headers, timeout=10)
-            soup = BeautifulSoup(r.text, 'html.parser')
-            containers = soup.find_all('div', class_='sc-c5cd0085-0 fWmXTW')
+    try:
+        r = requests.get(url_base, headers=headers, timeout=10)
+        soup = BeautifulSoup(r.text, 'html.parser')
+        containers = soup.find_all('div', class_='sc-c5cd0085-0 fWmXTW')
 
-            for container in containers:
-                nome_tag = container.find('span', class_='sc-fLlhyt hJreDe sc-14455254-0 sc-c5cd0085-4 ezNOEq clsIKA')
-                if not nome_tag:
-                    continue
-                nome_text = nome_tag.text.strip()
-                hash_nome = hashlib.md5(nome_text.encode()).hexdigest()
-                if hash_nome in produtos_unicos:
-                    continue
+        for container in containers:
+            nome_tag = container.find('span', class_='sc-fLlhyt hJreDe sc-14455254-0 sc-c5cd0085-4 ezNOEq clsIKA')
+            if not nome_tag:
+                continue
+            nome_text = nome_tag.text.strip()
+            hash_nome = hashlib.md5(nome_text.encode()).hexdigest()
+            if hash_nome in produtos_unicos:
+                continue
 
-                preco_text = "Preço não encontrado"
-                preco_promo_tag = container.find('span', class_='sc-fLlhyt gMFJKu sc-14455254-0 sc-c5cd0085-9 ezNOEq dDNfcV')
-                preco_antigo_tag = container.find('span', class_='sc-fLlhyt ehGA-Dk sc-14455254-0 sc-c5cd0085-12 ezNOEq bFqXWZ')
-                desconto_tag = container.find('span', class_='sc-fLlhyt hJreDe sc-14455254-0 sc-c5cd0085-11 ezNOEq hoiAgS')
+            preco_text = "Preço não encontrado"
+            preco_promo_tag = container.find('span', class_='sc-fLlhyt gMFJKu sc-14455254-0 sc-c5cd0085-9 ezNOEq dDNfcV')
+            preco_antigo_tag = container.find('span', class_='sc-fLlhyt ehGA-Dk sc-14455254-0 sc-c5cd0085-12 ezNOEq bFqXWZ')
+            desconto_tag = container.find('span', class_='sc-fLlhyt hJreDe sc-14455254-0 sc-c5cd0085-11 ezNOEq hoiAgS')
 
-                if preco_promo_tag and preco_antigo_tag and desconto_tag:
-                    preco_promocional = preco_promo_tag.text.strip().replace("R$", "").strip()
-                    preco_antigo = preco_antigo_tag.text.strip().replace("R$", "").strip()
-                    desconto = desconto_tag.text.strip()
-                    preco_text = f"💰 R$ {preco_promocional} (💲{preco_antigo} {desconto}🔻)"
-                    preco_base = preco_promocional
-                elif preco_promo_tag:
-                    preco = preco_promo_tag.text.strip().replace("R$", "").strip()
+            if preco_promo_tag and preco_antigo_tag and desconto_tag:
+                preco_promocional = preco_promo_tag.text.strip().replace("R$", "").strip()
+                preco_antigo = preco_antigo_tag.text.strip().replace("R$", "").strip()
+                desconto = desconto_tag.text.strip()
+                preco_text = f"💰 R$ {preco_promocional} (💲{preco_antigo} {desconto}🔻)"
+                preco_base = preco_promocional
+            elif preco_promo_tag:
+                preco = preco_promo_tag.text.strip().replace("R$", "").strip()
+                preco_text = f"💰 R$ {preco}"
+                preco_base = preco
+            else:
+                preco_normal_tag = container.find('span', class_='sc-fLlhyt fKrYQk sc-14455254-0 sc-c5cd0085-9 ezNOEq dDNfcV')
+                if preco_normal_tag:
+                    preco = preco_normal_tag.text.strip().replace("R$", "").strip()
                     preco_text = f"💰 R$ {preco}"
                     preco_base = preco
                 else:
-                    preco_normal_tag = container.find('span', class_='sc-fLlhyt fKrYQk sc-14455254-0 sc-c5cd0085-9 ezNOEq dDNfcV')
-                    if preco_normal_tag:
-                        preco = preco_normal_tag.text.strip().replace("R$", "").strip()
-                        preco_text = f"💰 R$ {preco}"
-                        preco_base = preco
-                    else:
-                        preco_base = "0"
+                    preco_base = "0"
 
-                descricao_tag = container.find('span', class_='sc-fLlhyt dPLwZv sc-14455254-0 sc-c5cd0085-10 ezNOEq krnAMj')
-                descricao_text = descricao_tag.text.strip() if descricao_tag else "Descrição não encontrada"
+            descricao_tag = container.find('span', class_='sc-fLlhyt dPLwZv sc-14455254-0 sc-c5cd0085-10 ezNOEq krnAMj')
+            descricao_text = descricao_tag.text.strip() if descricao_tag else "Descrição não encontrada"
 
-                imagem_url = "Imagem não encontrada"
-                noscript_tag = container.find('noscript')
-                if noscript_tag:
-                    nosoup = BeautifulSoup(noscript_tag.decode_contents(), 'html.parser')
-                    img_tag = nosoup.find('img')
-                    if img_tag and img_tag.get('src'):
-                        imagem_url = img_tag['src']
+            imagem_url = "Imagem não encontrada"
+            noscript_tag = container.find('noscript')
+            if noscript_tag:
+                nosoup = BeautifulSoup(noscript_tag.decode_contents(), 'html.parser')
+                img_tag = nosoup.find('img')
+                if img_tag and img_tag.get('src'):
+                    imagem_url = img_tag['src']
 
-                preco_unitario = calcular_preco_unitario(preco_base, descricao_text, nome_text)
-                preco_unitario_valor = extrair_valor_unitario(preco_unitario)
+            preco_unitario = calcular_preco_unitario(preco_base, descricao_text, nome_text)
+            preco_unitario_valor = extrair_valor_unitario(preco_unitario)
 
-                produtos_unicos[hash_nome] = {
-                    "nome": nome_text,
-                    "preco": preco_text,
-                    "descricao": descricao_text,
-                    "imagem": imagem_url,
-                    "preco_unitario": preco_unitario,
-                    "preco_unitario_valor": preco_unitario_valor
-                }
+            produtos_unicos[hash_nome] = {
+                "nome": nome_text,
+                "preco": preco_text,
+                "descricao": descricao_text,
+                "imagem": imagem_url,
+                "preco_unitario": preco_unitario,
+                "preco_unitario_valor": preco_unitario_valor
+            }
 
-        except Exception as e:
-            continue
+    except Exception as e:
+        # Pode colocar logging ou print se quiser
+        pass
 
     produtos_filtrados = [
         p for p in produtos_unicos.values()
@@ -178,7 +178,7 @@ def buscar_produtos_nagumo_multiplas(busca, tentativas=3):
 # FINAL — executa a busca e mostra resultados
 if busca:
     inicio = time.time()
-    resultados = buscar_produtos_nagumo_multiplas(busca, tentativas=3)
+    resultados = buscar_produtos_nagumo(busca)
     fim = time.time()
     tempo_execucao = fim - inicio
     st.markdown(f"<small>🔎 {len(resultados)} produto(s). {tempo_execucao:.1f}s.</small>", unsafe_allow_html=True)
