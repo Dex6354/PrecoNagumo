@@ -153,7 +153,14 @@ def buscar_produtos_nagumo(palavra_chave):
                 "preco_unitario": preco_unitario
             })
 
-        return produtos
+        # Filtra os produtos para que todos os termos da busca apareçam no nome, em qualquer ordem
+        palavras = palavra_chave.lower().split()
+        produtos_filtrados = [
+            p for p in produtos
+            if all(palavra in p["nome"].lower() for palavra in palavras)
+        ]
+
+        return produtos_filtrados
 
     except Exception as e:
         return [{"nome": "Erro na busca", "preco": "", "descricao": "", "imagem": str(e)}]
