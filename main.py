@@ -174,4 +174,3 @@ if busca:
                 st.markdown("---")
     else:
         st.write("Nenhum produto encontrado.")
-    
