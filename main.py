@@ -90,6 +90,19 @@ def calcular_preco_unitario(preco_str, descricao, nome):
 
     return preco_unitario
 
+def extrair_valor_unitario(preco_unitario_str):
+    """
+    Recebe o texto do preço unitário e extrai o valor numérico.
+    Exemplo: "📏 ~ R$ 13.11/kg" retorna 13.11 (float)
+    Se não conseguir extrair, retorna float('inf') para ordenar por último.
+    """
+    if not preco_unitario_str:
+        return float('inf')
+    m = re.search(r"R\$ (\d+[.,]?\d*)", preco_unitario_str)
+    if m:
+        return float(m.group(1).replace(',', '.'))
+    return float('inf')
+
 def buscar_produtos_nagumo(palavra_chave):
     palavra_chave_url = palavra_chave.strip().lower().replace(" ", "+")
     url = f"https://www.nagumo.com.br/nagumo/74b2f698-cffc-4a38-b8ce-0407f8d98de3/busca/{palavra_chave_url}"
@@ -145,20 +158,26 @@ def buscar_produtos_nagumo(palavra_chave):
 
             preco_unitario = calcular_preco_unitario(preco_base, descricao_text, nome_text)
 
+            preco_unitario_valor = extrair_valor_unitario(preco_unitario)
+
             produtos.append({
                 "nome": nome_text,
                 "preco": preco_text,
                 "descricao": descricao_text,
                 "imagem": imagem_url,
-                "preco_unitario": preco_unitario
+                "preco_unitario": preco_unitario,
+                "preco_unitario_valor": preco_unitario_valor
             })
 
-        # Filtra os produtos para que todos os termos da busca apareçam no nome, em qualquer ordem
+        # Filtra os produtos que contenham todas as palavras da busca no nome (independente da ordem)
         palavras = palavra_chave.lower().split()
         produtos_filtrados = [
             p for p in produtos
             if all(palavra in p["nome"].lower() for palavra in palavras)
         ]
+
+        # Ordena pelo preço unitário numérico (menor para maior)
+        produtos_filtrados.sort(key=lambda x: x["preco_unitario_valor"])
 
         return produtos_filtrados
 
