@@ -14,7 +14,7 @@ st.markdown("""
         footer {visibility: hidden;}
         #MainMenu {visibility: hidden;}
         div, span, strong, small {
-            font-size: 0.85rem !important;
+            font-size: 0.75rem !important;
         }
         img {
             max-width: 100px;
