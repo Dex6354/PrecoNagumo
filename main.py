@@ -167,8 +167,6 @@ def extrair_produtos(html, produtos_unicos):
 def buscar_produtos_dupla(busca):
     palavra_chave_url = busca.strip().lower().replace(" ", "+")
     url_base = f"https://www.nagumo.com.br/nagumo/74b2f698-cffc-4a38-b8ce-0407f8d98de3/busca/{palavra_chave_url}"
-
-    # Se quiser uma URL diferente para a 2ª busca, altere aqui, senão repete a mesma:
     urls = [url_base, url_base]
 
     produtos_unicos = {}
@@ -179,18 +177,16 @@ def buscar_produtos_dupla(busca):
     for html in resultados_html:
         extrair_produtos(html, produtos_unicos)
 
-    # Filtrar produtos que contenham todas as palavras da busca no nome (case insensitive)
     produtos_filtrados = [
         p for p in produtos_unicos.values()
         if all(palavra in p["nome"].lower() for palavra in busca.lower().split())
     ]
 
-    # Ordena pelo preço unitário (mais barato primeiro)
     produtos_filtrados.sort(key=lambda x: x["preco_unitario_valor"])
 
     return produtos_filtrados
 
-# --- Execução principal ---
+# Execução principal
 if busca:
     inicio = time.time()
     resultados = buscar_produtos_dupla(busca)
@@ -208,7 +204,7 @@ if busca:
                 </div>
                 <div style="flex: 1; word-break: break-word; overflow-wrap: anywhere;">
                     <strong>{produto['nome']}</strong><br>
-                    <span>{produto['preco']}</span>
+                    <span>{produto['preco'].replace('(', '<br>(')}</span>
                     {preco_unit}
                     <div style="margin-top: 4px; font-size: 0.85em; color: #666;">📝 {produto['descricao']}</div>
                 </div>
