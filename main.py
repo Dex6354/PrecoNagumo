@@ -27,65 +27,56 @@ def calcular_preco_unitario(preco_str, descricao, nome):
         return None
 
     preco_unitario = None
-    unidade_tipo = None
     fontes = [descricao.lower(), nome.lower()]
 
     for fonte in fontes:
-        match_g = re.search(r"(\d+)\s*(g|gramas?)", fonte)
+        match_g = re.search(r"(\d+[.,]?\d*)\s*(g|gramas?)", fonte)
         if match_g:
-            gramas = int(match_g.group(1))
+            gramas = float(match_g.group(1).replace(',', '.'))
             if gramas > 0:
-                preco_unitario = f"📏 ~ R$ {preco_valor / (gramas / 1000):.2f}/kg"
-                return preco_unitario
+                return f"📏 ~ R$ {preco_valor / (gramas / 1000):.2f}/kg"
 
-        match_kg = re.search(r"(\d+)\s*(kg|quilo)", fonte)
+        match_kg = re.search(r"(\d+[.,]?\d*)\s*(kg|quilo)", fonte)
         if match_kg:
-            kg = int(match_kg.group(1))
+            kg = float(match_kg.group(1).replace(',', '.'))
             if kg > 0:
-                preco_unitario = f"📏 ~ R$ {preco_valor / kg:.2f}/kg"
-                return preco_unitario
+                return f"📏 ~ R$ {preco_valor / kg:.2f}/kg"
 
-        match_ml = re.search(r"(\d+)\s*(ml|mililitros?)", fonte)
+        match_ml = re.search(r"(\d+[.,]?\d*)\s*(ml|mililitros?)", fonte)
         if match_ml:
-            ml = int(match_ml.group(1))
+            ml = float(match_ml.group(1).replace(',', '.'))
             if ml > 0:
-                preco_unitario = f"📏 ~ R$ {preco_valor / (ml / 1000):.2f}/L"
-                return preco_unitario
+                return f"📏 ~ R$ {preco_valor / (ml / 1000):.2f}/L"
 
-        match_l = re.search(r"(\d+)\s*(l|litros?)", fonte)
+        match_l = re.search(r"(\d+[.,]?\d*)\s*(l|litros?)", fonte)
         if match_l:
-            litros = int(match_l.group(1))
+            litros = float(match_l.group(1).replace(',', '.'))
             if litros > 0:
-                preco_unitario = f"📏 ~ R$ {preco_valor / litros:.2f}/L"
-                return preco_unitario
+                return f"📏 ~ R$ {preco_valor / litros:.2f}/L"
 
-        match_un = re.search(r"(\d+)\s*(un|unidades?)", fonte)
+        match_un = re.search(r"(\d+[.,]?\d*)\s*(un|unidades?)", fonte)
         if match_un:
-            unidades = int(match_un.group(1))
+            unidades = float(match_un.group(1).replace(',', '.'))
             if unidades > 0:
-                preco_valor_unitario = preco_valor / unidades
-                preco_unitario = f"📏 ~ R$ {preco_valor_unitario:.2f}/un"
-                unidade_tipo = "un"
+                preco_unitario = f"📏 ~ R$ {preco_valor / unidades:.2f}/un"
 
-        match_rls = re.search(r"(\d+)\s*(rls?|rolos?)", fonte)
+        match_rls = re.search(r"(\d+[.,]?\d*)\s*(rls?|rolos?)", fonte)
         if match_rls:
-            rolos = int(match_rls.group(1))
+            rolos = float(match_rls.group(1).replace(',', '.'))
             if rolos > 0:
-                preco_valor_unitario = preco_valor / rolos
-                preco_unitario = f"📏 ~ R$ {preco_valor_unitario:.2f}/rolo"
-                unidade_tipo = "rolo"
+                preco_unitario = f"📏 ~ R$ {preco_valor / rolos:.2f}/rolo"
 
     metros_por_item = None
     quantidade_itens = None
 
     for fonte in fontes:
-        match_metros = re.search(r"(\d+)\s*(m|mt|metros?)\b", fonte)
+        match_metros = re.search(r"(\d+[.,]?\d*)\s*(m|mt|metros?)", fonte)
         if match_metros:
-            metros_por_item = int(match_metros.group(1))
+            metros_por_item = float(match_metros.group(1).replace(',', '.'))
 
-        match_quantidade = re.search(r"(\d+)\s*(un|unidades?|rls?|rolos?)\b", fonte)
-        if match_quantidade:
-            quantidade_itens = int(match_quantidade.group(1))
+        match_qtd = re.search(r"(\d+[.,]?\d*)\s*(un|unidades?|rolos?|rls?)", fonte)
+        if match_qtd:
+            quantidade_itens = float(match_qtd.group(1).replace(',', '.'))
 
     if metros_por_item and quantidade_itens:
         total_metros = metros_por_item * quantidade_itens
@@ -103,7 +94,6 @@ def buscar_produtos_nagumo(palavra_chave):
     palavra_chave_url = palavra_chave.strip().lower().replace(" ", "+")
     url = f"https://www.nagumo.com.br/nagumo/74b2f698-cffc-4a38-b8ce-0407f8d98de3/busca/{palavra_chave_url}"
     headers = {"User-Agent": "Mozilla/5.0"}
-
     produtos = []
 
     try:
