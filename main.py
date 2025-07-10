@@ -34,37 +34,37 @@ def calcular_preco_unitario(preco_str, descricao, nome):
         if match_g:
             gramas = float(match_g.group(1).replace(',', '.'))
             if gramas > 0:
-                return f"📏 ~ R$ {preco_valor / (gramas / 1000):.2f}/kg"
+                return f"📦 ~ R$ {preco_valor / (gramas / 1000):.2f}/kg"
 
         match_kg = re.search(r"(\d+[.,]?\d*)\s*(kg|quilo)", fonte)
         if match_kg:
             kg = float(match_kg.group(1).replace(',', '.'))
             if kg > 0:
-                return f"📏 ~ R$ {preco_valor / kg:.2f}/kg"
+                return f"📦 ~ R$ {preco_valor / kg:.2f}/kg"
 
         match_ml = re.search(r"(\d+[.,]?\d*)\s*(ml|mililitros?)", fonte)
         if match_ml:
             ml = float(match_ml.group(1).replace(',', '.'))
             if ml > 0:
-                return f"📏 ~ R$ {preco_valor / (ml / 1000):.2f}/L"
+                return f"📦 ~ R$ {preco_valor / (ml / 1000):.2f}/L"
 
         match_l = re.search(r"(\d+[.,]?\d*)\s*(l|litros?)", fonte)
         if match_l:
             litros = float(match_l.group(1).replace(',', '.'))
             if litros > 0:
-                return f"📏 ~ R$ {preco_valor / litros:.2f}/L"
+                return f"📦 ~ R$ {preco_valor / litros:.2f}/L"
 
         match_un = re.search(r"(\d+[.,]?\d*)\s*(un|unidades?)", fonte)
         if match_un:
             unidades = float(match_un.group(1).replace(',', '.'))
             if unidades > 0:
-                preco_unitario = f"📏 ~ R$ {preco_valor / unidades:.2f}/un"
+                preco_unitario = f"📦 ~ R$ {preco_valor / unidades:.2f}/un"
 
         match_rls = re.search(r"(\d+[.,]?\d*)\s*(rls?|rolos?)", fonte)
         if match_rls:
             rolos = float(match_rls.group(1).replace(',', '.'))
             if rolos > 0:
-                preco_unitario = f"📏 ~ R$ {preco_valor / rolos:.2f}/rolo"
+                preco_unitario = f"📦 ~ R$ {preco_valor / rolos:.2f}/rolo"
 
     metros_por_item = None
     quantidade_itens = None
@@ -86,7 +86,7 @@ def calcular_preco_unitario(preco_str, descricao, nome):
             if preco_unitario:
                 preco_unitario += f" {preco_metro_str}"
             else:
-                preco_unitario = f"📏 ~ {preco_metro_str}"
+                preco_unitario = f"📦 ~ {preco_metro_str}"
 
     return preco_unitario
 
