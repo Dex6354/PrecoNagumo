@@ -91,11 +91,6 @@ def calcular_preco_unitario(preco_str, descricao, nome):
     return preco_unitario
 
 def extrair_valor_unitario(preco_unitario_str):
-    """
-    Recebe o texto do preço unitário e extrai o valor numérico.
-    Exemplo: "📏 ~ R$ 13.11/kg" retorna 13.11 (float)
-    Se não conseguir extrair, retorna float('inf') para ordenar por último.
-    """
     if not preco_unitario_str:
         return float('inf')
     m = re.search(r"R\$ (\d+[.,]?\d*)", preco_unitario_str)
@@ -130,7 +125,8 @@ def buscar_produtos_nagumo(palavra_chave):
                 preco_promocional = preco_promo_tag.text.strip().replace("R$", "").strip()
                 preco_antigo = preco_antigo_tag.text.strip().replace("R$", "").strip()
                 desconto = desconto_tag.text.strip()
-                preco_text = f"💰 R$ {preco_promocional} (💲{preco_antigo}🔻 {desconto})"
+                # Formatação ajustada do preço com desconto:
+                preco_text = f"💰 R$ {preco_promocional} (💲{preco_antigo} {desconto}🔻)"
                 preco_base = preco_promocional
             elif preco_promo_tag:
                 preco = preco_promo_tag.text.strip().replace("R$", "").strip()
@@ -157,7 +153,6 @@ def buscar_produtos_nagumo(palavra_chave):
                     imagem_url = img_tag['src']
 
             preco_unitario = calcular_preco_unitario(preco_base, descricao_text, nome_text)
-
             preco_unitario_valor = extrair_valor_unitario(preco_unitario)
 
             produtos.append({
@@ -169,14 +164,12 @@ def buscar_produtos_nagumo(palavra_chave):
                 "preco_unitario_valor": preco_unitario_valor
             })
 
-        # Filtra os produtos que contenham todas as palavras da busca no nome (independente da ordem)
         palavras = palavra_chave.lower().split()
         produtos_filtrados = [
             p for p in produtos
             if all(palavra in p["nome"].lower() for palavra in palavras)
         ]
 
-        # Ordena pelo preço unitário numérico (menor para maior)
         produtos_filtrados.sort(key=lambda x: x["preco_unitario_valor"])
 
         return produtos_filtrados
