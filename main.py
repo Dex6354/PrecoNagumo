@@ -158,19 +158,26 @@ if busca:
     resultados = buscar_produtos_nagumo(busca)
     if resultados:
         for produto in resultados:
-            with st.container():
-                col1, col2 = st.columns([1, 3])
-                with col1:
-                    if "http" in produto["imagem"]:
-                        st.image(produto["imagem"], width=120)
-                    else:
-                        st.write("Sem imagem")
-                with col2:
-                    st.markdown(f"**{produto['nome']}**")
-                    st.markdown(f"{produto['preco']}")
-                    if produto["preco_unitario"]:
-                        st.markdown(f"{produto['preco_unitario']}")
-                    st.markdown(f"📝 {produto['descricao']}")
-                st.markdown("---")
+            if "http" in produto["imagem"]:
+                imagem_html = f'<img src="{produto["imagem"]}" width="100" style="border-radius:8px;">'
+            else:
+                imagem_html = "Sem imagem"
+
+            preco_unit = f'<div style="margin-top:4px;">{produto["preco_unitario"]}</div>' if produto["preco_unitario"] else ""
+
+            st.markdown(f"""
+                <div style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 1rem;">
+                    <div style="flex: 0 0 auto;">
+                        {imagem_html}
+                    </div>
+                    <div style="flex: 1;">
+                        <strong>{produto['nome']}</strong><br>
+                        <span>{produto['preco']}</span>
+                        {preco_unit}
+                        <div style="margin-top: 4px; font-size: 0.85em; color: #666;">📝 {produto['descricao']}</div>
+                    </div>
+                </div>
+                <hr style="margin: 8px 0;">
+            """, unsafe_allow_html=True)
     else:
         st.write("Nenhum produto encontrado.")
