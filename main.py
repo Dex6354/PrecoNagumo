@@ -13,6 +13,13 @@ st.markdown("""
         .block-container { padding-top: 0rem; }
         footer {visibility: hidden;}
         #MainMenu {visibility: hidden;}
+        div, span, strong, small {
+            font-size: 0.85rem !important;
+        }
+        img {
+            max-width: 100px;
+            height: auto;
+        }
     </style>
 """, unsafe_allow_html=True)
 
