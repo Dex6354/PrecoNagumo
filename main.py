@@ -45,6 +45,20 @@ def calcular_preco_unitario(preco_str, descricao, nome):
                 preco_unitario = f"📏 ~ R$ {preco_valor / kg:.2f}/kg"
                 return preco_unitario
 
+        match_ml = re.search(r"(\d+)\s*(ml|mililitros?)", fonte)
+        if match_ml:
+            ml = int(match_ml.group(1))
+            if ml > 0:
+                preco_unitario = f"📏 ~ R$ {preco_valor / (ml / 1000):.2f}/L"
+                return preco_unitario
+
+        match_l = re.search(r"(\d+)\s*(l|litros?)", fonte)
+        if match_l:
+            litros = int(match_l.group(1))
+            if litros > 0:
+                preco_unitario = f"📏 ~ R$ {preco_valor / litros:.2f}/L"
+                return preco_unitario
+
         match_un = re.search(r"(\d+)\s*(un|unidades?)", fonte)
         if match_un:
             unidades = int(match_un.group(1))
@@ -166,11 +180,11 @@ if busca:
             preco_unit = f'<div style="margin-top:4px;">{produto["preco_unitario"]}</div>' if produto["preco_unitario"] else ""
 
             st.markdown(f"""
-                <div style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 1rem;">
+                <div style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 1rem; flex-wrap: wrap;">
                     <div style="flex: 0 0 auto;">
                         {imagem_html}
                     </div>
-                    <div style="flex: 1;">
+                    <div style="flex: 1; word-break: break-word; overflow-wrap: anywhere;">
                         <strong>{produto['nome']}</strong><br>
                         <span>{produto['preco']}</span>
                         {preco_unit}
