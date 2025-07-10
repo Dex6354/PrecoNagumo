@@ -2,11 +2,11 @@ import streamlit as st
 import requests
 from bs4 import BeautifulSoup
 import re
+import hashlib
+import time
 
-# Configuração da página
 st.set_page_config(page_title="Busca de Produtos Nagumo", page_icon="🛒")
 
-# CSS para remover espaço superior e rodapé
 st.markdown("""
     <style>
         .block-container { padding-top: 0rem; }
@@ -15,7 +15,6 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Título
 st.markdown("<h5>🛒 Preço Nagumo</h5>", unsafe_allow_html=True)
 
 busca = st.text_input("Digite o nome do produto:")
@@ -98,109 +97,106 @@ def extrair_valor_unitario(preco_unitario_str):
         return float(m.group(1).replace(',', '.'))
     return float('inf')
 
-def buscar_produtos_nagumo(palavra_chave):
-    palavra_chave_url = palavra_chave.strip().lower().replace(" ", "+")
-    url = f"https://www.nagumo.com.br/nagumo/74b2f698-cffc-4a38-b8ce-0407f8d98de3/busca/{palavra_chave_url}"
+def buscar_produtos_nagumo_multiplas(busca, tentativas=3):
+    produtos_unicos = {}
     headers = {"User-Agent": "Mozilla/5.0"}
-    produtos = []
+    palavra_chave_url = busca.strip().lower().replace(" ", "+")
+    url_base = f"https://www.nagumo.com.br/nagumo/74b2f698-cffc-4a38-b8ce-0407f8d98de3/busca/{palavra_chave_url}"
 
-    try:
-        r = requests.get(url, headers=headers, timeout=10)
-        soup = BeautifulSoup(r.text, 'html.parser')
-        product_containers = soup.find_all('div', class_='sc-c5cd0085-0 fWmXTW')
+    for _ in range(tentativas):
+        try:
+            r = requests.get(url_base, headers=headers, timeout=10)
+            soup = BeautifulSoup(r.text, 'html.parser')
+            containers = soup.find_all('div', class_='sc-c5cd0085-0 fWmXTW')
 
-        for container in product_containers:
-            nome_tag = container.find('span', class_='sc-fLlhyt hJreDe sc-14455254-0 sc-c5cd0085-4 ezNOEq clsIKA')
-            if not nome_tag:
-                continue
+            for container in containers:
+                nome_tag = container.find('span', class_='sc-fLlhyt hJreDe sc-14455254-0 sc-c5cd0085-4 ezNOEq clsIKA')
+                if not nome_tag:
+                    continue
+                nome_text = nome_tag.text.strip()
+                hash_nome = hashlib.md5(nome_text.encode()).hexdigest()
+                if hash_nome in produtos_unicos:
+                    continue
 
-            nome_text = nome_tag.text.strip()
+                preco_text = "Preço não encontrado"
+                preco_promo_tag = container.find('span', class_='sc-fLlhyt gMFJKu sc-14455254-0 sc-c5cd0085-9 ezNOEq dDNfcV')
+                preco_antigo_tag = container.find('span', class_='sc-fLlhyt ehGA-Dk sc-14455254-0 sc-c5cd0085-12 ezNOEq bFqXWZ')
+                desconto_tag = container.find('span', class_='sc-fLlhyt hJreDe sc-14455254-0 sc-c5cd0085-11 ezNOEq hoiAgS')
 
-            preco_text = "Preço não encontrado"
-            preco_promo_tag = container.find('span', class_='sc-fLlhyt gMFJKu sc-14455254-0 sc-c5cd0085-9 ezNOEq dDNfcV')
-            preco_antigo_tag = container.find('span', class_='sc-fLlhyt ehGA-Dk sc-14455254-0 sc-c5cd0085-12 ezNOEq bFqXWZ')
-            desconto_tag = container.find('span', class_='sc-fLlhyt hJreDe sc-14455254-0 sc-c5cd0085-11 ezNOEq hoiAgS')
-
-            if preco_promo_tag and preco_antigo_tag and desconto_tag:
-                preco_promocional = preco_promo_tag.text.strip().replace("R$", "").strip()
-                preco_antigo = preco_antigo_tag.text.strip().replace("R$", "").strip()
-                desconto = desconto_tag.text.strip()
-                # Formatação ajustada do preço com desconto:
-                preco_text = f"💰 R$ {preco_promocional} (💲{preco_antigo} {desconto}🔻)"
-                preco_base = preco_promocional
-            elif preco_promo_tag:
-                preco = preco_promo_tag.text.strip().replace("R$", "").strip()
-                preco_text = f"💰 R$ {preco}"
-                preco_base = preco
-            else:
-                preco_normal_tag = container.find('span', class_='sc-fLlhyt fKrYQk sc-14455254-0 sc-c5cd0085-9 ezNOEq dDNfcV')
-                if preco_normal_tag:
-                    preco = preco_normal_tag.text.strip().replace("R$", "").strip()
+                if preco_promo_tag and preco_antigo_tag and desconto_tag:
+                    preco_promocional = preco_promo_tag.text.strip().replace("R$", "").strip()
+                    preco_antigo = preco_antigo_tag.text.strip().replace("R$", "").strip()
+                    desconto = desconto_tag.text.strip()
+                    preco_text = f"💰 R$ {preco_promocional} (💲{preco_antigo} {desconto}🔻)"
+                    preco_base = preco_promocional
+                elif preco_promo_tag:
+                    preco = preco_promo_tag.text.strip().replace("R$", "").strip()
                     preco_text = f"💰 R$ {preco}"
                     preco_base = preco
                 else:
-                    preco_base = "0"
+                    preco_normal_tag = container.find('span', class_='sc-fLlhyt fKrYQk sc-14455254-0 sc-c5cd0085-9 ezNOEq dDNfcV')
+                    if preco_normal_tag:
+                        preco = preco_normal_tag.text.strip().replace("R$", "").strip()
+                        preco_text = f"💰 R$ {preco}"
+                        preco_base = preco
+                    else:
+                        preco_base = "0"
 
-            descricao_tag = container.find('span', class_='sc-fLlhyt dPLwZv sc-14455254-0 sc-c5cd0085-10 ezNOEq krnAMj')
-            descricao_text = descricao_tag.text.strip() if descricao_tag else "Descrição não encontrada"
+                descricao_tag = container.find('span', class_='sc-fLlhyt dPLwZv sc-14455254-0 sc-c5cd0085-10 ezNOEq krnAMj')
+                descricao_text = descricao_tag.text.strip() if descricao_tag else "Descrição não encontrada"
 
-            imagem_url = "Imagem não encontrada"
-            noscript_tag = container.find('noscript')
-            if noscript_tag:
-                nosoup = BeautifulSoup(noscript_tag.decode_contents(), 'html.parser')
-                img_tag = nosoup.find('img')
-                if img_tag and img_tag.get('src'):
-                    imagem_url = img_tag['src']
+                imagem_url = "Imagem não encontrada"
+                noscript_tag = container.find('noscript')
+                if noscript_tag:
+                    nosoup = BeautifulSoup(noscript_tag.decode_contents(), 'html.parser')
+                    img_tag = nosoup.find('img')
+                    if img_tag and img_tag.get('src'):
+                        imagem_url = img_tag['src']
 
-            preco_unitario = calcular_preco_unitario(preco_base, descricao_text, nome_text)
-            preco_unitario_valor = extrair_valor_unitario(preco_unitario)
+                preco_unitario = calcular_preco_unitario(preco_base, descricao_text, nome_text)
+                preco_unitario_valor = extrair_valor_unitario(preco_unitario)
 
-            produtos.append({
-                "nome": nome_text,
-                "preco": preco_text,
-                "descricao": descricao_text,
-                "imagem": imagem_url,
-                "preco_unitario": preco_unitario,
-                "preco_unitario_valor": preco_unitario_valor
-            })
+                produtos_unicos[hash_nome] = {
+                    "nome": nome_text,
+                    "preco": preco_text,
+                    "descricao": descricao_text,
+                    "imagem": imagem_url,
+                    "preco_unitario": preco_unitario,
+                    "preco_unitario_valor": preco_unitario_valor
+                }
 
-        palavras = palavra_chave.lower().split()
-        produtos_filtrados = [
-            p for p in produtos
-            if all(palavra in p["nome"].lower() for palavra in palavras)
-        ]
+        except Exception as e:
+            continue
 
-        produtos_filtrados.sort(key=lambda x: x["preco_unitario_valor"])
+    produtos_filtrados = [
+        p for p in produtos_unicos.values()
+        if all(palavra in p["nome"].lower() for palavra in busca.lower().split())
+    ]
+    produtos_filtrados.sort(key=lambda x: x["preco_unitario_valor"])
+    return produtos_filtrados
 
-        return produtos_filtrados
-
-    except Exception as e:
-        return [{"nome": "Erro na busca", "preco": "", "descricao": "", "imagem": str(e)}]
-
+# FINAL — executa a busca e mostra resultados
 if busca:
-    resultados = buscar_produtos_nagumo(busca)
-    if resultados:
-        for produto in resultados:
-            if "http" in produto["imagem"]:
-                imagem_html = f'<img src="{produto["imagem"]}" width="100" style="border-radius:8px;">'
-            else:
-                imagem_html = "Sem imagem"
+    inicio = time.time()
+    resultados = buscar_produtos_nagumo_multiplas(busca, tentativas=3)
+    fim = time.time()
+    tempo_execucao = fim - inicio
+    st.markdown(f"<small>🔎 {len(resultados)} produto(s). {tempo_execucao:.1f}s.</small>", unsafe_allow_html=True)
 
-            preco_unit = f'<div style="margin-top:4px;">{produto["preco_unitario"]}</div>' if produto["preco_unitario"] else ""
-
-            st.markdown(f"""
-                <div style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 1rem; flex-wrap: wrap;">
-                    <div style="flex: 0 0 auto;">
-                        {imagem_html}
-                    </div>
-                    <div style="flex: 1; word-break: break-word; overflow-wrap: anywhere;">
-                        <strong>{produto['nome']}</strong><br>
-                        <span>{produto['preco']}</span>
-                        {preco_unit}
-                        <div style="margin-top: 4px; font-size: 0.85em; color: #666;">📝 {produto['descricao']}</div>
-                    </div>
+    for produto in resultados:
+        imagem_html = f'<img src="{produto["imagem"]}" width="100" style="border-radius:8px;">' if "http" in produto["imagem"] else "Sem imagem"
+        preco_unit = f'<div style="margin-top:4px;">{produto["preco_unitario"]}</div>' if produto["preco_unitario"] else ""
+        st.markdown(f"""
+            <div style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 1rem; flex-wrap: wrap;">
+                <div style="flex: 0 0 auto;">
+                    {imagem_html}
                 </div>
-                <hr style="margin: 8px 0;">
-            """, unsafe_allow_html=True)
-    else:
-        st.write("Nenhum produto encontrado.")
+                <div style="flex: 1; word-break: break-word; overflow-wrap: anywhere;">
+                    <strong>{produto['nome']}</strong><br>
+                    <span>{produto['preco']}</span>
+                    {preco_unit}
+                    <div style="margin-top: 4px; font-size: 0.85em; color: #666;">📝 {produto['descricao']}</div>
+                </div>
+            </div>
+            <hr style="margin: 8px 0;">
+        """, unsafe_allow_html=True)
