@@ -31,7 +31,7 @@ def calcular_preco_unitario(preco_str, descricao, nome):
     try:
         preco_valor = float(preco_str.replace("R$", "").replace(",", ".").split()[0])
     except:
-        return None, None
+        return "📦 Sem unidade", None
 
     preco_unitario = None
     preco_metro = None
@@ -91,10 +91,14 @@ def calcular_preco_unitario(preco_str, descricao, nome):
         if total_metros > 0:
             preco_metro = f"📏 ~ R$ {preco_valor / total_metros:.3f}/m"
 
+    # Se não encontrou nenhum preço unitário válido
+    if preco_unitario is None and preco_metro is None:
+        return "📦 Sem unidade", None
+
     return preco_unitario, preco_metro
 
 def extrair_valor_unitario(preco_unitario_str):
-    if not preco_unitario_str:
+    if not preco_unitario_str or preco_unitario_str == "📦 Sem unidade":
         return float('inf')
     m = re.search(r"R\$ (\d+[.,]?\d*)", preco_unitario_str)
     if m:
@@ -145,7 +149,9 @@ def extrair_produtos(html, produtos_unicos):
                 preco_base = "0"
 
         descricao_tag = container.find('span', class_='sc-fLlhyt dPLwZv sc-14455254-0 sc-c5cd0085-10 ezNOEq krnAMj')
-        descricao_text = descricao_tag.text.strip() if descricao_tag else "Descrição não encontrada"
+        descricao_text = descricao_tag.text.strip() if descricao_tag else "Sem descrição"
+        if descricao_text == "Descrição não encontrada":
+            descricao_text = "Sem descrição"
 
         imagem_url = "Imagem não encontrada"
         noscript_tag = container.find('noscript')
