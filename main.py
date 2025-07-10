@@ -24,9 +24,10 @@ def calcular_preco_unitario(preco_str, descricao, nome):
     try:
         preco_valor = float(preco_str.replace("R$", "").replace(",", ".").split()[0])
     except:
-        return None
+        return None, None
 
     preco_unitario = None
+    preco_metro = None
     fontes = [descricao.lower(), nome.lower()]
 
     for fonte in fontes:
@@ -34,25 +35,25 @@ def calcular_preco_unitario(preco_str, descricao, nome):
         if match_g:
             gramas = float(match_g.group(1).replace(',', '.'))
             if gramas > 0:
-                return f"📦 ~ R$ {preco_valor / (gramas / 1000):.2f}/kg"
+                return f"📦 ~ R$ {preco_valor / (gramas / 1000):.2f}/kg", None
 
         match_kg = re.search(r"(\d+[.,]?\d*)\s*(kg|quilo)", fonte)
         if match_kg:
             kg = float(match_kg.group(1).replace(',', '.'))
             if kg > 0:
-                return f"📦 ~ R$ {preco_valor / kg:.2f}/kg"
+                return f"📦 ~ R$ {preco_valor / kg:.2f}/kg", None
 
         match_ml = re.search(r"(\d+[.,]?\d*)\s*(ml|mililitros?)", fonte)
         if match_ml:
             ml = float(match_ml.group(1).replace(',', '.'))
             if ml > 0:
-                return f"📦 ~ R$ {preco_valor / (ml / 1000):.2f}/L"
+                return f"📦 ~ R$ {preco_valor / (ml / 1000):.2f}/L", None
 
         match_l = re.search(r"(\d+[.,]?\d*)\s*(l|litros?)", fonte)
         if match_l:
             litros = float(match_l.group(1).replace(',', '.'))
             if litros > 0:
-                return f"📦 ~ R$ {preco_valor / litros:.2f}/L"
+                return f"📦 ~ R$ {preco_valor / litros:.2f}/L", None
 
         match_un = re.search(r"(\d+[.,]?\d*)\s*(un|unidades?)", fonte)
         if match_un:
@@ -81,14 +82,9 @@ def calcular_preco_unitario(preco_str, descricao, nome):
     if metros_por_item and quantidade_itens:
         total_metros = metros_por_item * quantidade_itens
         if total_metros > 0:
-            preco_metro = preco_valor / total_metros
-            preco_metro_str = f"(💲{preco_metro:.3f}/m)"
-            if preco_unitario:
-                preco_unitario += f" {preco_metro_str}"
-            else:
-                preco_unitario = f"📦 ~ {preco_metro_str}"
+            preco_metro = f"📏 ~ R$ {preco_valor / total_metros:.3f}/m"
 
-    return preco_unitario
+    return preco_unitario, preco_metro
 
 def extrair_valor_unitario(preco_unitario_str):
     if not preco_unitario_str:
@@ -152,7 +148,7 @@ def extrair_produtos(html, produtos_unicos):
             if img_tag and img_tag.get('src'):
                 imagem_url = img_tag['src']
 
-        preco_unitario = calcular_preco_unitario(preco_base, descricao_text, nome_text)
+        preco_unitario, preco_metro = calcular_preco_unitario(preco_base, descricao_text, nome_text)
         preco_unitario_valor = extrair_valor_unitario(preco_unitario)
 
         produtos_unicos[hash_nome] = {
@@ -161,6 +157,7 @@ def extrair_produtos(html, produtos_unicos):
             "descricao": descricao_text,
             "imagem": imagem_url,
             "preco_unitario": preco_unitario,
+            "preco_metro": preco_metro,
             "preco_unitario_valor": preco_unitario_valor
         }
 
@@ -196,7 +193,13 @@ if busca:
 
     for produto in resultados:
         imagem_html = f'<img src="{produto["imagem"]}" width="100" style="border-radius:8px;">' if "http" in produto["imagem"] else "Sem imagem"
-        preco_unit = f'<div style="margin-top:4px;">{produto["preco_unitario"]}</div>' if produto["preco_unitario"] else ""
+
+        preco_unit = ""
+        if produto["preco_unitario"]:
+            preco_unit += f'<div style="margin-top:4px;">{produto["preco_unitario"]}</div>'
+        if produto["preco_metro"]:
+            preco_unit += f'<div style="margin-top:2px;">{produto["preco_metro"]}</div>'
+
         st.markdown(f"""
             <div style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 1rem; flex-wrap: wrap;">
                 <div style="flex: 0 0 auto;">
