@@ -23,9 +23,16 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.markdown("<h5>🛒 Preço Nagumo</h5>", unsafe_allow_html=True)
+# Título com imagem no lugar do emoji
+st.markdown("""
+    <h5 style="display: flex; align-items: center;">
+        <img src="https://institucional.nagumo.com.br/images/nagumo-2000.png" width="80" style="margin-right:8px; background-color: white; border-radius: 4px; padding: 2px;"/>
+        Preço Nagumo
+    </h5>
+""", unsafe_allow_html=True)
 
-busca = st.text_input("Digite o nome do produto:")
+# Campo de busca com emoji
+busca = st.text_input("🛒Digite o nome do produto:")
 
 def calcular_preco_unitario(preco_str, descricao, nome):
     try:
@@ -91,7 +98,6 @@ def calcular_preco_unitario(preco_str, descricao, nome):
         if total_metros > 0:
             preco_metro = f"📏 ~ R$ {preco_valor / total_metros:.3f}/m"
 
-    # Se não encontrou nenhum preço unitário válido
     if preco_unitario is None and preco_metro is None:
         return "📦 Sem unidade", None
 
@@ -196,13 +202,12 @@ def buscar_produtos_dupla(busca):
 
     return produtos_filtrados
 
-# Execução principal
 if busca:
     inicio = time.time()
     resultados = buscar_produtos_dupla(busca)
     fim = time.time()
     tempo_execucao = fim - inicio
-    st.markdown(f"<small>🔎 {len(resultados)} produto(s). {tempo_execucao:.1f}s.</small>", unsafe_allow_html=True)
+    st.markdown(f"<small>🔎 {len(resultados)} produto(s) encontrado(s). {tempo_execucao:.1f}s.</small>", unsafe_allow_html=True)
 
     for produto in resultados:
         imagem_html = f'<img src="{produto["imagem"]}" width="100" style="border-radius:8px;">' if "http" in produto["imagem"] else "Sem imagem"
