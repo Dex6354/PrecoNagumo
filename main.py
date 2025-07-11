@@ -23,7 +23,11 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.markdown("<h5>🛒 Preço Nagumo</h5>", unsafe_allow_html=True)
+st.markdown("""
+    <h5 style="display:flex; align-items:center;">
+    <img src="https://s3.amazonaws.com/shibata.com.br/files/tema/filial-1/header-site-omni.png?1752244176816" width="100" style="margin-right:8px; background-color: white;"/>
+    Preço Nagumo
+</h5>
 
 busca = st.text_input("Digite o nome do produto:")
 
