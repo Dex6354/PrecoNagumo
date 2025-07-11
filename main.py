@@ -5,6 +5,7 @@ import re
 import hashlib
 import time
 import concurrent.futures
+import unicodedata
 
 st.set_page_config(page_title="Busca de Produtos Nagumo", page_icon="🛒")
 
@@ -23,7 +24,6 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Título com imagem no lugar do emoji
 st.markdown("""
     <h5 style="display: flex; align-items: center;">
         <img src="https://institucional.nagumo.com.br/images/nagumo-2000.png" width="80" style="margin-right:8px; background-color: white; border-radius: 4px; padding: 2px;"/>
@@ -31,8 +31,10 @@ st.markdown("""
     </h5>
 """, unsafe_allow_html=True)
 
-# Campo de busca com emoji
 busca = st.text_input("🛒Digite o nome do produto:")
+
+def remover_acentos(texto):
+    return ''.join(c for c in unicodedata.normalize('NFD', texto) if unicodedata.category(c) != 'Mn').lower()
 
 def calcular_preco_unitario(preco_str, descricao, nome):
     try:
@@ -106,9 +108,25 @@ def calcular_preco_unitario(preco_str, descricao, nome):
 def extrair_valor_unitario(preco_unitario_str):
     if not preco_unitario_str or preco_unitario_str == "📦 Sem unidade":
         return float('inf')
-    m = re.search(r"R\$ (\d+[.,]?\d*)", preco_unitario_str)
+    m = re.search(r"R\$ ([\d.,]+)", preco_unitario_str)
     if m:
-        return float(m.group(1).replace(',', '.'))
+        valor_str = m.group(1).replace('.', '').replace(',', '.')
+        try:
+            return float(valor_str)
+        except:
+            return float('inf')
+    return float('inf')
+
+def extrair_valor_metro(preco_metro_str):
+    if not preco_metro_str:
+        return float('inf')
+    match = re.search(r"R\$ ([\d.,]+)", preco_metro_str)
+    if match:
+        valor_str = match.group(1).replace('.', '').replace(',', '.')
+        try:
+            return float(valor_str)
+        except:
+            return float('inf')
     return float('inf')
 
 def fetch_html(url):
@@ -139,7 +157,7 @@ def extrair_produtos(html, produtos_unicos):
             preco_promocional = preco_promo_tag.text.strip().replace("R$", "").strip()
             preco_antigo = preco_antigo_tag.text.strip().replace("R$", "").strip()
             desconto = desconto_tag.text.strip()
-            preco_text = f"💰 R$ {preco_promocional} (💲{preco_antigo} {desconto}🔻)"
+            preco_text = f"💰 R$ {preco_promocional} ({preco_antigo} {desconto})"
             preco_base = preco_promocional
         elif preco_promo_tag:
             preco = preco_promo_tag.text.strip().replace("R$", "").strip()
@@ -156,8 +174,6 @@ def extrair_produtos(html, produtos_unicos):
 
         descricao_tag = container.find('span', class_='sc-fLlhyt dPLwZv sc-14455254-0 sc-c5cd0085-10 ezNOEq krnAMj')
         descricao_text = descricao_tag.text.strip() if descricao_tag else "Sem descrição"
-        if descricao_text == "Descrição não encontrada":
-            descricao_text = "Sem descrição"
 
         imagem_url = "Imagem não encontrada"
         noscript_tag = container.find('noscript')
@@ -169,6 +185,7 @@ def extrair_produtos(html, produtos_unicos):
 
         preco_unitario, preco_metro = calcular_preco_unitario(preco_base, descricao_text, nome_text)
         preco_unitario_valor = extrair_valor_unitario(preco_unitario)
+        preco_metro_valor = extrair_valor_metro(preco_metro)
 
         produtos_unicos[hash_nome] = {
             "nome": nome_text,
@@ -177,7 +194,8 @@ def extrair_produtos(html, produtos_unicos):
             "imagem": imagem_url,
             "preco_unitario": preco_unitario,
             "preco_metro": preco_metro,
-            "preco_unitario_valor": preco_unitario_valor
+            "preco_unitario_valor": preco_unitario_valor,
+            "preco_metro_valor": preco_metro_valor
         }
 
 def buscar_produtos_dupla(busca):
@@ -193,12 +211,18 @@ def buscar_produtos_dupla(busca):
     for html in resultados_html:
         extrair_produtos(html, produtos_unicos)
 
+    busca_normalizada = remover_acentos(busca)
+    palavras_busca = busca_normalizada.split()
+
     produtos_filtrados = [
         p for p in produtos_unicos.values()
-        if all(palavra in p["nome"].lower() for palavra in busca.lower().split())
+        if all(palavra in remover_acentos(p["nome"]) for palavra in palavras_busca)
     ]
 
-    produtos_filtrados.sort(key=lambda x: x["preco_unitario_valor"])
+    if any(p["preco_metro_valor"] != float('inf') for p in produtos_filtrados):
+        produtos_filtrados.sort(key=lambda p: p.get("preco_metro_valor", float('inf')))
+    else:
+        produtos_filtrados.sort(key=lambda p: p.get("preco_unitario_valor", float('inf')))
 
     return produtos_filtrados
 
@@ -218,6 +242,27 @@ if busca:
         if produto["preco_metro"]:
             preco_unit += f'<div style="margin-top:2px;">{produto["preco_metro"]}</div>'
 
+        preco_html = ""
+        preco_texto = produto["preco"]
+
+        m = re.match(r"💰 R\$ ([\d.,]+)(?: \(([\d.,]+) (-?\d+%)\))?", preco_texto)
+
+        if m:
+            preco_promocional = m.group(1)
+            preco_antigo = m.group(2)
+            desconto = m.group(3)
+
+            if preco_antigo and desconto:
+                preco_html = (
+                    f'<div style="font-weight:bold; font-size:1rem;">R$ {preco_promocional} '
+                    f'<span style="color: red;">{desconto} OFF</span></div>'
+                    f'<div style="color: gray; text-decoration: line-through; font-size:0.9rem; margin-top:2px;">R$ {preco_antigo}</div>'
+                )
+            else:
+                preco_html = f'<div style="font-weight:bold; font-size:1rem;">R$ {preco_promocional}</div>'
+        else:
+            preco_html = f'<div>{preco_texto}</div>'
+
         st.markdown(f"""
             <div style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 1rem; flex-wrap: wrap;">
                 <div style="flex: 0 0 auto;">
@@ -225,7 +270,7 @@ if busca:
                 </div>
                 <div style="flex: 1; word-break: break-word; overflow-wrap: anywhere;">
                     <strong>{produto['nome']}</strong><br>
-                    <span>{produto['preco'].replace('(', '<br>(')}</span>
+                    {preco_html}
                     {preco_unit}
                     <div style="margin-top: 4px; font-size: 0.85em; color: #666;">📝 {produto['descricao']}</div>
                 </div>
