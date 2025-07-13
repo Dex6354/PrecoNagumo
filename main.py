@@ -33,7 +33,7 @@ def remover_acentos(texto):
     return ''.join(c for c in unicodedata.normalize('NFD', texto) if unicodedata.category(c) != 'Mn').lower()
 
 def calcular_preco_unitario(preco_valor, descricao, nome):
-    preco_unitario = "📦 Sem unidade"
+    preco_unitario = "Sem unidade"
     fontes = [descricao.lower(), nome.lower()]
 
     for fonte in fontes:
@@ -41,31 +41,31 @@ def calcular_preco_unitario(preco_valor, descricao, nome):
         if match_g:
             gramas = float(match_g.group(1).replace(',', '.'))
             if gramas > 0:
-                return f"📦 ~ R$ {preco_valor / (gramas / 1000):.2f}/kg"
+                return f"~ R$ {preco_valor / (gramas / 1000):.2f}/kg"
 
         match_kg = re.search(r"(\d+[.,]?\d*)\s*(kg|quilo)", fonte)
         if match_kg:
             kg = float(match_kg.group(1).replace(',', '.'))
             if kg > 0:
-                return f"📦 ~ R$ {preco_valor / kg:.2f}/kg"
+                return f"~ R$ {preco_valor / kg:.2f}/kg"
 
         match_ml = re.search(r"(\d+[.,]?\d*)\s*(ml|mililitros?)", fonte)
         if match_ml:
             ml = float(match_ml.group(1).replace(',', '.'))
             if ml > 0:
-                return f"📦 ~ R$ {preco_valor / (ml / 1000):.2f}/L"
+                return f"~ R$ {preco_valor / (ml / 1000):.2f}/L"
 
         match_l = re.search(r"(\d+[.,]?\d*)\s*(l|litros?)", fonte)
         if match_l:
             litros = float(match_l.group(1).replace(',', '.'))
             if litros > 0:
-                return f"📦 ~ R$ {preco_valor / litros:.2f}/L"
+                return f"~ R$ {preco_valor / litros:.2f}/L"
 
         match_un = re.search(r"(\d+[.,]?\d*)\s*(un|unidades?)", fonte)
         if match_un:
             unidades = float(match_un.group(1).replace(',', '.'))
             if unidades > 0:
-                return f"📦 ~ R$ {preco_valor / unidades:.2f}/un"
+                return f"~ R$ {preco_valor / unidades:.2f}/un"
 
     return preco_unitario
 
@@ -73,7 +73,7 @@ def extrair_valor_unitario(preco_unitario):
     match = re.search(r"R\$ (\d+[.,]?\d*)", preco_unitario)
     if match:
         return float(match.group(1).replace(',', '.'))
-    return float('inf')  # Coloca os produtos sem unidade no final
+    return float('inf')
 
 def buscar_nagumo(term="banana"):
     url = "https://nextgentheadless.instaleap.io/api/v3"
@@ -101,14 +101,33 @@ def buscar_nagumo(term="banana"):
                 "googleAnalyticsSessionId": ""
             }
         },
-        "query": "query SearchProducts($searchProductsInput: SearchProductsInput!) {\n  searchProducts(searchProductsInput: $searchProductsInput) {\n    products {\n      name\n      price\n      photosUrl\n      sku\n      stock\n      description\n    }\n  }\n}"
+        "query": """
+        query SearchProducts($searchProductsInput: SearchProductsInput!) {
+          searchProducts(searchProductsInput: $searchProductsInput) {
+            products {
+              name
+              price
+              photosUrl
+              sku
+              stock
+              description
+              promotion {
+                isActive
+                type
+                conditions {
+                  price
+                  priceBeforeTaxes
+                }
+              }
+            }
+          }
+        }
+        """
     }
 
     response = requests.post(url, headers=headers, json=payload)
     data = response.json()
-
-    produtos = data.get("data", {}).get("searchProducts", {}).get("products", [])
-    return produtos
+    return data.get("data", {}).get("searchProducts", {}).get("products", [])
 
 if termo:
     with st.spinner("🔍 Buscando produtos..."):
@@ -116,17 +135,41 @@ if termo:
 
     st.markdown(f"<small>🔎 {len(produtos)} produto(s) encontrado(s).</small>", unsafe_allow_html=True)
 
-    # Calcula preço unitário e valor numérico para ordenação
     for p in produtos:
-        p['preco_unitario_str'] = calcular_preco_unitario(p['price'], p['description'], p['name'])
+        preco_normal = p.get("price", 0)
+        promocao = p.get("promotion") or {}
+        cond = promocao.get("conditions") or []
+        preco_desconto = None
+
+        if promocao.get("isActive") and isinstance(cond, list) and len(cond) > 0:
+            preco_desconto = cond[0].get("price")
+
+        preco_exibir = preco_desconto if preco_desconto else preco_normal
+        p['preco_unitario_str'] = calcular_preco_unitario(preco_exibir, p['description'], p['name'])
         p['preco_unitario_valor'] = extrair_valor_unitario(p['preco_unitario_str'])
 
-    # Ordena produtos pelo menor preço unitário
     produtos = sorted(produtos, key=lambda x: x['preco_unitario_valor'])
 
     for p in produtos:
         imagem = p['photosUrl'][0] if p.get('photosUrl') else ""
         preco_unitario = p['preco_unitario_str']
+        preco = p['price']
+        promocao = p.get("promotion") or {}
+        cond = promocao.get("conditions") or []
+        preco_desconto = None
+
+        if promocao.get("isActive") and isinstance(cond, list) and len(cond) > 0:
+            preco_desconto = cond[0].get("price")
+
+        if preco_desconto and preco_desconto < preco:
+            desconto_percentual = ((preco - preco_desconto) / preco) * 100
+            preco_html = f"""
+                <span style='font-weight: bold; font-size: 1rem;'>R$ {preco_desconto:.2f}</span>
+                <span style='color: red; font-size: 0.9rem;'> ({desconto_percentual:.0f}% OFF)</span><br>
+                <span style='text-decoration: line-through; color: gray;'>R$ {preco:.2f}</span>
+            """
+        else:
+            preco_html = f"R$ {preco:.2f}"
 
         st.markdown(f"""
             <div style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 1rem; flex-wrap: wrap;">
@@ -135,10 +178,9 @@ if termo:
                 </div>
                 <div style="flex: 1; word-break: break-word; overflow-wrap: anywhere;">
                     <strong>{p['name']}</strong><br>
-                    <div style="font-weight:bold; font-size:1rem;">R$ {p['price']:.2f}</div>
-                    <div style="margin-top: 4px; font-size: 0.9em;">{preco_unitario}</div>
-                    <div style="margin-top: 4px; font-size: 0.85em; color: #666;">📝 {p['description']}</div>
-                    <div style="color: gray; font-size: 0.8em;">📦 Estoque: {p['stock']}</div>
+                    <strong>{preco_html}</strong><br>
+                    <div style="margin-top: 4px; font-size: 0.9em; color: #666;">{preco_unitario}</div>
+                    <div style="color: gray; font-size: 0.8em;">Estoque: {p['stock']}</div>
                 </div>
             </div>
             <hr style="margin: 8px 0;">
