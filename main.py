@@ -32,7 +32,7 @@ termo = st.text_input("🛒Digite o nome do produto:")
 def remover_acentos(texto):
     return ''.join(c for c in unicodedata.normalize('NFD', texto) if unicodedata.category(c) != 'Mn').lower()
 
-def calcular_preco_unitario(preco_valor, descricao, nome):
+def calcular_preco_unitario(preco_valor, descricao, nome, unidade_api=None):
     preco_unitario = "Sem unidade"
     fontes = [descricao.lower(), nome.lower()]
 
@@ -66,6 +66,20 @@ def calcular_preco_unitario(preco_valor, descricao, nome):
             unidades = float(match_un.group(1).replace(',', '.'))
             if unidades > 0:
                 return f"~ R$ {preco_valor / unidades:.2f}/un"
+
+    # Fallback com campo "unit"
+    if unidade_api:
+        unidade_api = unidade_api.lower()
+        if unidade_api == 'kg':
+            return f"~ R$ {preco_valor:.2f}/kg"
+        elif unidade_api == 'g':
+            return f"~ R$ {preco_valor * 1000:.2f}/kg"
+        elif unidade_api == 'l':
+            return f"~ R$ {preco_valor:.2f}/L"
+        elif unidade_api == 'ml':
+            return f"~ R$ {preco_valor * 1000:.2f}/L"
+        elif unidade_api == 'un':
+            return f"~ R$ {preco_valor:.2f}/un"
 
     return preco_unitario
 
@@ -111,6 +125,7 @@ def buscar_nagumo(term="banana"):
               sku
               stock
               description
+              unit
               promotion {
                 isActive
                 type
@@ -145,7 +160,7 @@ if termo:
             preco_desconto = cond[0].get("price")
 
         preco_exibir = preco_desconto if preco_desconto else preco_normal
-        p['preco_unitario_str'] = calcular_preco_unitario(preco_exibir, p['description'], p['name'])
+        p['preco_unitario_str'] = calcular_preco_unitario(preco_exibir, p['description'], p['name'], p.get("unit"))
         p['preco_unitario_valor'] = extrair_valor_unitario(p['preco_unitario_str'])
 
     produtos = sorted(produtos, key=lambda x: x['preco_unitario_valor'])
