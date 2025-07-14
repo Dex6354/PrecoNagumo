@@ -34,8 +34,52 @@ def remover_acentos(texto):
 
 def calcular_preco_unitario(preco_valor, descricao, nome, unidade_api=None):
     preco_unitario = "Sem unidade"
-    fontes = [descricao.lower(), nome.lower()]
+    texto_completo = f"{descricao} {nome}".lower()
 
+    # Lógica especial para papel higiênico
+    if "papel higi" in texto_completo:
+        # Prioridade para Leve X
+        match_rolos = re.search(r"leve\s*0*(\d+)", texto_completo)
+
+        # LXXPYY ou LVXXPGYY
+        if not match_rolos:
+            match_rolos = re.search(r"\blv?\s*0*(\d+)", texto_completo)
+
+        # LXXPYY tudo junto
+        if not match_rolos:
+            match_rolos = re.search(r"\blv?(\d+)", texto_completo)
+
+        # LXX separado
+        if not match_rolos:
+            match_rolos = re.search(r"\bl\s*0*(\d+)", texto_completo)
+
+        # C/XX
+        if not match_rolos:
+            match_rolos = re.search(r"c/\s*0*(\d+)", texto_completo)
+
+        # XX rolos
+        if not match_rolos:
+            match_rolos = re.search(r"(\d+)\s*rolos?", texto_completo)
+
+        # XX unidades
+        if not match_rolos:
+            match_rolos = re.search(r"(\d+)\s*(un|unidades?)", texto_completo)
+
+        # Metragem por rolo
+        match_metros = re.search(r"(\d+[.,]?\d*)\s*(m|metros?|mt)", texto_completo)
+
+        if match_rolos and match_metros:
+            try:
+                rolos = int(match_rolos.group(1))
+                metros = float(match_metros.group(1).replace(',', '.'))
+                if rolos > 0 and metros > 0:
+                    preco_por_metro = preco_valor / rolos / metros
+                    return f"R$ {preco_por_metro:.3f}/m"
+            except:
+                pass
+
+    # Cálculos padrão
+    fontes = [descricao.lower(), nome.lower()]
     for fonte in fontes:
         match_g = re.search(r"(\d+[.,]?\d*)\s*(g|gramas?)", fonte)
         if match_g:
