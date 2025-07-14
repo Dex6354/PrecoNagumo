@@ -223,7 +223,26 @@ def buscar_nagumo(term="banana"):
 
 if termo:
     with st.spinner("🔍 Buscando produtos..."):
-        produtos = buscar_nagumo(termo)
+        # Fazer 2 buscas separadas
+        palavras_busca = remover_acentos(termo).split()
+        produtos_todos = []
+
+        for palavra in palavras_busca:
+            produtos_todos.extend(buscar_nagumo(palavra))
+
+        # Remover duplicatas (por SKU)
+        produtos_unicos = {p['sku']: p for p in produtos_todos}.values()
+
+        # Filtrar manualmente os que contêm TODAS as palavras no nome+descrição
+        produtos_filtrados = []
+        for produto in produtos_unicos:
+            texto = f"{produto['name']} {produto.get('description', '')}"
+            texto_normalizado = remover_acentos(texto)
+            if all(p in texto_normalizado for p in palavras_busca):
+                produtos_filtrados.append(produto)
+
+        produtos = produtos_filtrados
+
 
     st.markdown(f"<small>🔎 {len(produtos)} produto(s) encontrado(s).</small>", unsafe_allow_html=True)
 
