@@ -45,15 +45,12 @@ def extrair_info_papel_toalha(nome, descricao):
     texto_desc = remover_acentos(descricao.lower())
     texto_completo = f"{texto_nome} {texto_desc}"
 
-    # Exceção 1: "200 folhas" no nome
     if "200 folhas" in texto_nome:
         return None, None, 200, "200 folhas"
 
-    # Exceção 3: "2 rolos com 120 folhas" = 120 no total (não multiplicar)
     if "2 rolos com 120 folhas" in texto_completo:
         return 2, None, 120, "2 rolos com 120 folhas"
 
-    # Expressões comuns
     padroes = [
         r"(\d+)\s*rolos?.*?(\d+)\s*folhas",
         r"(\d+)\s*rolos?.*?cada.*?(\d+)\s*folhas",
@@ -74,7 +71,6 @@ def extrair_info_papel_toalha(nome, descricao):
         total_folhas = int(m_folhas.group(1))
         return None, None, total_folhas, f"{total_folhas} folhas"
 
-    # Exceção 2: sem folhas, mas há "un"
     m_un = re.search(r"(\d+)\s*(un|unidades?)", texto_nome)
     if m_un:
         total = int(m_un.group(1))
@@ -250,6 +246,13 @@ if termo:
             rolos, folhas_por_rolo, total_folhas, texto_exibicao = extrair_info_papel_toalha(p['name'], p['description'])
             if texto_exibicao:
                 titulo += f" <span class='info-cinza'>({texto_exibicao})</span>"
+
+        if "papel higi" in remover_acentos(titulo.lower()):
+            titulo_lower = remover_acentos(titulo.lower())
+            if "folha simples" in titulo_lower:
+                titulo = re.sub(r"(folha simples)", r"<span style='color:red; font-weight:bold;'>\1</span>", titulo, flags=re.IGNORECASE)
+            if "folha dupla" in titulo_lower or "folha tripla" in titulo_lower:
+                titulo = re.sub(r"(folha dupla|folha tripla)", r"<span style='color:green; font-weight:bold;'>\1</span>", titulo, flags=re.IGNORECASE)
 
         p['titulo_exibido'] = titulo
 
