@@ -17,6 +17,10 @@ st.markdown("""
             max-width: 100px;
             height: auto;
         }
+        .info-cinza {
+            color: gray;
+            font-size: 0.8rem;
+        }
     </style>
 """, unsafe_allow_html=True)
 
@@ -32,42 +36,79 @@ termo = st.text_input("🛒Digite o nome do produto:")
 def remover_acentos(texto):
     return ''.join(c for c in unicodedata.normalize('NFD', texto) if unicodedata.category(c) != 'Mn').lower()
 
+def contem_papel_toalha(texto):
+    texto = remover_acentos(texto.lower())
+    return "papel" in texto and "toalha" in texto
+
+def extrair_info_papel_toalha(nome, descricao):
+    texto_nome = remover_acentos(nome.lower())
+    texto_desc = remover_acentos(descricao.lower())
+    texto_completo = f"{texto_nome} {texto_desc}"
+
+    # Exceção 1: "200 folhas" no nome
+    if "200 folhas" in texto_nome:
+        return None, None, 200, "200 folhas"
+
+    # Exceção 3: "2 rolos com 120 folhas" = 120 no total (não multiplicar)
+    if "2 rolos com 120 folhas" in texto_completo:
+        return 2, None, 120, "2 rolos com 120 folhas"
+
+    # Expressões comuns
+    padroes = [
+        r"(\d+)\s*rolos?.*?(\d+)\s*folhas",
+        r"(\d+)\s*rolos?.*?cada.*?(\d+)\s*folhas",
+        r"(\d+)\s*rolos?.*?contendo\s*(\d+)\s*folhas",
+        r"(\d+)\s*rolos?.*?com\s*(\d+)\s*folhas",
+        r"(\d+)\s*rolos?.*?e\s*(\d+)\s*folhas",
+    ]
+    for padrao in padroes:
+        m = re.search(padrao, texto_completo)
+        if m:
+            rolos = int(m.group(1))
+            folhas_por_rolo = int(m.group(2))
+            total_folhas = rolos * folhas_por_rolo
+            return rolos, folhas_por_rolo, total_folhas, f"{rolos} rolos, {folhas_por_rolo} folhas por rolo"
+
+    m_folhas = re.search(r"(\d+)\s*folhas", texto_completo)
+    if m_folhas:
+        total_folhas = int(m_folhas.group(1))
+        return None, None, total_folhas, f"{total_folhas} folhas"
+
+    # Exceção 2: sem folhas, mas há "un"
+    m_un = re.search(r"(\d+)\s*(un|unidades?)", texto_nome)
+    if m_un:
+        total = int(m_un.group(1))
+        return None, None, total, f"{total} unidades"
+
+    return None, None, None, None
+
 def calcular_preco_unitario(preco_valor, descricao, nome, unidade_api=None):
     preco_unitario = "Sem unidade"
     texto_completo = f"{descricao} {nome}".lower()
 
-    # Lógica especial para papel higiênico
-    if "papel higi" in texto_completo:
-        # Prioridade para Leve X
-        match_rolos = re.search(r"leve\s*0*(\d+)", texto_completo)
+    if contem_papel_toalha(texto_completo):
+        rolos, folhas_por_rolo, total_folhas, texto_exibicao = extrair_info_papel_toalha(nome, descricao)
+        if total_folhas and total_folhas > 0:
+            preco_por_item = preco_valor / total_folhas
+            return f"R$ {preco_por_item:.3f}/folha"
+        return "Preço por folha: n/d"
 
-        # LXXPYY ou LVXXPGYY
+    if "papel higi" in texto_completo:
+        match_rolos = re.search(r"leve\s*0*(\d+)", texto_completo)
         if not match_rolos:
             match_rolos = re.search(r"\blv?\s*0*(\d+)", texto_completo)
-
-        # LXXPYY tudo junto
         if not match_rolos:
             match_rolos = re.search(r"\blv?(\d+)", texto_completo)
-
-        # LXX separado
         if not match_rolos:
             match_rolos = re.search(r"\bl\s*0*(\d+)", texto_completo)
-
-        # C/XX
         if not match_rolos:
             match_rolos = re.search(r"c/\s*0*(\d+)", texto_completo)
-
-        # XX rolos
         if not match_rolos:
             match_rolos = re.search(r"(\d+)\s*rolos?", texto_completo)
-
-        # XX unidades
         if not match_rolos:
             match_rolos = re.search(r"(\d+)\s*(un|unidades?)", texto_completo)
 
-        # Metragem por rolo
         match_metros = re.search(r"(\d+[.,]?\d*)\s*(m|metros?|mt)", texto_completo)
-
         if match_rolos and match_metros:
             try:
                 rolos = int(match_rolos.group(1))
@@ -78,7 +119,6 @@ def calcular_preco_unitario(preco_valor, descricao, nome, unidade_api=None):
             except:
                 pass
 
-    # Cálculos padrão
     fontes = [descricao.lower(), nome.lower()]
     for fonte in fontes:
         match_g = re.search(r"(\d+[.,]?\d*)\s*(g|gramas?)", fonte)
@@ -134,7 +174,6 @@ def extrair_valor_unitario(preco_unitario):
 
 def buscar_nagumo(term="banana"):
     url = "https://nextgentheadless.instaleap.io/api/v3"
-
     headers = {
         "Content-Type": "application/json",
         "Origin": "https://www.nagumo.com",
@@ -143,7 +182,6 @@ def buscar_nagumo(term="banana"):
         "apollographql-client-name": "Ecommerce SSR",
         "apollographql-client-version": "0.11.0"
     }
-
     payload = {
         "operationName": "SearchProducts",
         "variables": {
@@ -198,13 +236,22 @@ if termo:
         promocao = p.get("promotion") or {}
         cond = promocao.get("conditions") or []
         preco_desconto = None
-
         if promocao.get("isActive") and isinstance(cond, list) and len(cond) > 0:
             preco_desconto = cond[0].get("price")
 
         preco_exibir = preco_desconto if preco_desconto else preco_normal
+
         p['preco_unitario_str'] = calcular_preco_unitario(preco_exibir, p['description'], p['name'], p.get("unit"))
         p['preco_unitario_valor'] = extrair_valor_unitario(p['preco_unitario_str'])
+
+        titulo = p['name']
+        texto_completo = p['name'] + " " + p['description']
+        if contem_papel_toalha(texto_completo):
+            rolos, folhas_por_rolo, total_folhas, texto_exibicao = extrair_info_papel_toalha(p['name'], p['description'])
+            if texto_exibicao:
+                titulo += f" <span class='info-cinza'>({texto_exibicao})</span>"
+
+        p['titulo_exibido'] = titulo
 
     produtos = sorted(produtos, key=lambda x: x['preco_unitario_valor'])
 
@@ -215,7 +262,6 @@ if termo:
         promocao = p.get("promotion") or {}
         cond = promocao.get("conditions") or []
         preco_desconto = None
-
         if promocao.get("isActive") and isinstance(cond, list) and len(cond) > 0:
             preco_desconto = cond[0].get("price")
 
@@ -235,7 +281,7 @@ if termo:
                     <img src="{imagem}" width="100" style="border-radius:8px;">
                 </div>
                 <div style="flex: 1; word-break: break-word; overflow-wrap: anywhere;">
-                    <strong>{p['name']}</strong><br>
+                    <strong>{p['titulo_exibido']}</strong><br>
                     <strong>{preco_html}</strong><br>
                     <div style="margin-top: 4px; font-size: 0.9em; color: #666;">{preco_unitario}</div>
                     <div style="color: gray; font-size: 0.8em;">Estoque: {p['stock']}</div>
