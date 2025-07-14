@@ -41,45 +41,44 @@ def calcular_preco_unitario(preco_valor, descricao, nome, unidade_api=None):
         if match_g:
             gramas = float(match_g.group(1).replace(',', '.'))
             if gramas > 0:
-                return f"~ R$ {preco_valor / (gramas / 1000):.2f}/kg"
+                return f"R$ {preco_valor / (gramas / 1000):.2f}/kg"
 
         match_kg = re.search(r"(\d+[.,]?\d*)\s*(kg|quilo)", fonte)
         if match_kg:
             kg = float(match_kg.group(1).replace(',', '.'))
             if kg > 0:
-                return f"~ R$ {preco_valor / kg:.2f}/kg"
+                return f"R$ {preco_valor / kg:.2f}/kg"
 
         match_ml = re.search(r"(\d+[.,]?\d*)\s*(ml|mililitros?)", fonte)
         if match_ml:
             ml = float(match_ml.group(1).replace(',', '.'))
             if ml > 0:
-                return f"~ R$ {preco_valor / (ml / 1000):.2f}/L"
+                return f"R$ {preco_valor / (ml / 1000):.2f}/L"
 
         match_l = re.search(r"(\d+[.,]?\d*)\s*(l|litros?)", fonte)
         if match_l:
             litros = float(match_l.group(1).replace(',', '.'))
             if litros > 0:
-                return f"~ R$ {preco_valor / litros:.2f}/L"
+                return f"R$ {preco_valor / litros:.2f}/L"
 
         match_un = re.search(r"(\d+[.,]?\d*)\s*(un|unidades?)", fonte)
         if match_un:
             unidades = float(match_un.group(1).replace(',', '.'))
             if unidades > 0:
-                return f"~ R$ {preco_valor / unidades:.2f}/un"
+                return f"R$ {preco_valor / unidades:.2f}/un"
 
-    # Fallback com campo "unit"
     if unidade_api:
         unidade_api = unidade_api.lower()
         if unidade_api == 'kg':
-            return f"~ R$ {preco_valor:.2f}/kg"
+            return f"R$ {preco_valor:.2f}/kg"
         elif unidade_api == 'g':
-            return f"~ R$ {preco_valor * 1000:.2f}/kg"
+            return f"R$ {preco_valor * 1000:.2f}/kg"
         elif unidade_api == 'l':
-            return f"~ R$ {preco_valor:.2f}/L"
+            return f"R$ {preco_valor:.2f}/L"
         elif unidade_api == 'ml':
-            return f"~ R$ {preco_valor * 1000:.2f}/L"
+            return f"R$ {preco_valor * 1000:.2f}/L"
         elif unidade_api == 'un':
-            return f"~ R$ {preco_valor:.2f}/un"
+            return f"R$ {preco_valor:.2f}/un"
 
     return preco_unitario
 
