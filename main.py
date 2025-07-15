@@ -3,7 +3,7 @@ import requests
 import re
 import unicodedata
 
-st.set_page_config(page_title="Busca de Produtos Nagumo", page_icon="🛒")
+st.set_page_config(page_title="Preço Nagumo", page_icon="🛒")
 
 st.markdown("""
     <style>
