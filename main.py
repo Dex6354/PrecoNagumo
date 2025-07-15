@@ -21,6 +21,11 @@ st.markdown("""
             color: gray;
             font-size: 0.8rem;
         }
+        hr.product-separator {
+            border: none;
+            border-top: 1px solid #ccc;
+            margin: 10px 0;
+        }
     </style>
 """, unsafe_allow_html=True)
 
@@ -309,5 +314,5 @@ if termo:
                     <div style="color: gray; font-size: 0.8em;">Estoque: {p['stock']}</div>
                 </div>
             </div>
-            <hr style="margin: 8px 0;">
+            <hr class='product-separator' />
         """, unsafe_allow_html=True)
